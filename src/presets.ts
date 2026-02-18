@@ -8,7 +8,7 @@ import type { Preset } from './types';
  * Built-in preset patterns
  */
 export const PRESETS: Preset[] = [
-    /*{
+    {
         name: 'Neon Grid',
         colors: ['#0ff', '#f0f', '#ff0'],
         seed: 1337,
@@ -247,7 +247,7 @@ export const PRESETS: Preset[] = [
         cellSize: 30,
         direction: 'top-bottom',
         randomness: 0.1,
-    },*/
+    },
     {
         name: 'Adamyaa',
         colors: ['#91FFE4', '#C4BBE5', '#ABF0FF'],
