@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Generate abstract geometric patterns with customizable gradients, colors, and pixel editing">
+  <title>Generative Pattern</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%236366f1' width='100' height='100' rx='20'/><rect fill='%23a855f7' x='20' y='20' width='25' height='25'/><rect fill='%2322d3ee' x='55' y='20' width='25' height='25'/><rect fill='%23fbbf24' x='20' y='55' width='25' height='25'/><rect fill='%23f472b6' x='55' y='55' width='25' height='25'/></svg>">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Control Panel -->
+    <aside class="control-panel" role="complementary" aria-label="Pattern controls">
+      <!-- Header -->
+      <header class="panel-header">
+        <h1>Generative Pattern</h1>
+      </header>
+
+      <!-- Canvas Size -->
+      <section class="section">
+        <h2 class="section-title">Canvas Size</h2>
+        <div class="control-row">
+          <label for="width">Width</label>
+          <input type="number" id="width" value="512" min="1" max="4096" aria-label="Canvas width in pixels">
+          <span>px</span>
+        </div>
+        <div class="control-row">
+          <label for="height">Height</label>
+          <input type="number" id="height" value="512" min="1" max="4096" aria-label="Canvas height in pixels">
+          <span>px</span>
+        </div>
+        <div class="control-row">
+          <label for="cell-size">Cell Size</label>
+          <input type="range" id="cell-size" min="1" max="64" value="16" aria-label="Grid cell size">
+          <span id="cell-size-value" class="slider-value">16</span>
+        </div>
+        <span id="size-warning" class="warning"></span>
+      </section>
+
+      <!-- Gradient -->
+      <section class="section">
+        <h2 class="section-title">Gradient</h2>
+        <div class="control-row">
+          <label for="direction">Direction</label>
+          <select id="direction" aria-label="Gradient direction">
+            <option value="top-bottom">Top → Bottom</option>
+            <option value="bottom-top">Bottom → Top</option>
+            <option value="left-right">Left → Right</option>
+            <option value="right-left">Right → Left</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label for="randomness">Randomness</label>
+          <input type="range" id="randomness" min="0" max="1" step="0.01" value="0"
+            aria-label="Color randomness amount">
+          <span id="randomness-value" class="slider-value">0.00</span>
+        </div>
+        <div class="control-row">
+          <label for="seed">Seed</label>
+          <input type="text" id="seed" value="42" aria-label="Random seed for reproducibility">
+        </div>
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="color-mode" id="mode-solid" checked>
+            Solid
+          </label>
+          <label>
+            <input type="radio" name="color-mode" id="mode-gradient">
+            Gradient
+          </label>
+        </div>
+      </section>
+
+      <!-- Symmetry -->
+      <section class="section">
+        <h2 class="section-title">Symmetry</h2>
+        <div class="checkbox-row">
+          <input type="checkbox" id="symmetry-h">
+          <label for="symmetry-h">Mirror Horizontal</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="symmetry-v">
+          <label for="symmetry-v">Mirror Vertical</label>
+        </div>
+      </section>
+
+      <!-- Colors -->
+      <section class="section">
+        <h2 class="section-title">Colors (up to 20)</h2>
+        <div id="color-list" class="color-list" role="list" aria-label="Color palette"></div>
+        <button type="button" id="add-color" class="secondary">+ Add Color</button>
+        <div class="control-row" style="margin-top: 8px;">
+          <label for="presets">Presets</label>
+          <select id="presets" aria-label="Load preset palette">
+            <option value="">Select preset...</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <label for="saved-palettes">Saved</label>
+          <select id="saved-palettes" aria-label="Load saved palette">
+            <option value="">My palettes...</option>
+          </select>
+        </div>
+        <button type="button" id="save-palette" class="secondary" style="width: 100%; margin-top: 4px;">
+          Save Current Palette
+        </button>
+      </section>
+
+      <!-- Pixel Editor -->
+      <section class="section">
+        <h2 class="section-title">Pixel Editor</h2>
+        <div class="checkbox-row">
+          <input type="checkbox" id="edit-mode">
+          <label for="edit-mode">Edit Mode</label>
+          <span class="shortcut">E</span>
+        </div>
+        <div class="control-row">
+          <label for="brush-size">Brush Size</label>
+          <input type="range" id="brush-size" min="1" max="32" value="1" aria-label="Brush size in cells">
+          <span id="brush-size-value" class="slider-value">1</span>
+        </div>
+        <div class="control-row">
+          <label for="brush-color">Brush Color</label>
+          <input type="color" id="brush-color" value="#ffffff" aria-label="Brush color">
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 8px;">
+          Click to paint • Shift+Click to eyedrop
+        </p>
+        <button type="button" id="clear-overrides" class="secondary danger" style="width: 100%; margin-top: 8px;">
+          Clear All Edits
+        </button>
+      </section>
+
+      <!-- Color Replace -->
+      <section class="section">
+        <h2 class="section-title">Find & Replace Color</h2>
+        <div class="replace-row">
+          <input type="color" id="replace-from" value="#ffffff" aria-label="Source color">
+          <span>→</span>
+          <input type="color" id="replace-to" value="#000000" aria-label="Target color">
+          <button type="button" id="apply-replace">Apply</button>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="section">
+        <h2 class="section-title">Actions</h2>
+        <button type="button" id="regenerate" style="width: 100%; margin-bottom: 8px;">
+          🎲 Regenerate
+          <span class="shortcut">R</span>
+        </button>
+        <div class="button-row">
+          <button type="button" id="export-png">
+            Export PNG
+            <span class="shortcut">Ctrl+S</span>
+          </button>
+          <button type="button" id="export-svg" class="secondary">
+            Export SVG
+            <span class="shortcut">Ctrl+X</span>
+          </button>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Canvas Area -->
+    <main id="canvas-container" role="main" aria-label="Pattern preview">
+      <canvas id="canvas" width="512" height="512"></canvas>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
