@@ -2,8 +2,8 @@
  * Canvas renderer for pattern generation
  */
 
-import type { PatternSettings, CellColorMode } from './types';
-import { createGradientSampler, hexToRgb, lerpColor, rgbToHex, safeColor } from './gradient';
+import type { PatternSettings } from './types';
+import { createGradientSampler, hexToRgb, rgbToHex, safeColor } from './gradient';
 import { mulberry32 } from './rng';
 import { generateBricks, renderBricksToCanvas } from './brickGenerator';
 

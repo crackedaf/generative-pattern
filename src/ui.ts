@@ -37,8 +37,8 @@ let uiState: UIState | null = null;
 /**
  * Debounced callback
  */
-function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
-    return ((...args: unknown[]) => {
+function debounce<T extends (...args: never[]) => void>(fn: T, delay: number): T {
+    return ((...args: never[]) => {
         if (debounceTimer) {
             clearTimeout(debounceTimer);
         }
@@ -223,19 +223,66 @@ function addColor(): void {
 }
 
 /**
+ * Shows or hides the brick controls panel and enables/disables all inputs inside it.
+ */
+function setBrickControlsVisible(visible: boolean): void {
+    const section = document.getElementById('brick-controls');
+    if (!section) return;
+    section.style.display = visible ? 'block' : 'none';
+
+    // Enable/disable every form element inside the section
+    const inputs = section.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select');
+    inputs.forEach(el => { el.disabled = !visible; });
+
+    // Moss density row is only shown when MossyBrick is selected
+    if (visible && uiState?.settings.brickSettings) {
+        syncMossDensityRow(uiState.settings.brickSettings.brickStyle);
+    }
+}
+
+/**
+ * Shows/hides the moss density slider based on brick style.
+ */
+function syncMossDensityRow(style: string): void {
+    const row = document.getElementById('moss-density-row');
+    const input = document.getElementById('moss-density') as HTMLInputElement | null;
+    if (row) row.style.display = style === 'MossyBrick' ? 'flex' : 'none';
+    if (input) input.disabled = style !== 'MossyBrick';
+}
+
+/**
  * Loads a preset
  */
 function loadPreset(preset: Preset): void {
     if (!uiState) return;
 
-    uiState.settings = {
-        ...uiState.settings,
-        colors: [...preset.colors],
-        seed: preset.seed,
-        cellSize: preset.cellSize,
-        direction: preset.direction,
-        randomness: preset.randomness,
-    };
+    if (preset.generator === 'brick' && preset.brickSettings) {
+        // Brick preset
+        uiState.settings = {
+            ...uiState.settings,
+            colors: [...preset.colors],
+            seed: preset.seed,
+            cellSize: preset.cellSize,
+            direction: preset.direction,
+            randomness: preset.randomness,
+            generator: 'brick',
+            brickSettings: { ...preset.brickSettings },
+        };
+        setBrickControlsVisible(true);
+    } else {
+        // Standard grid preset — clear brick state
+        uiState.settings = {
+            ...uiState.settings,
+            colors: [...preset.colors],
+            seed: preset.seed,
+            cellSize: preset.cellSize,
+            direction: preset.direction,
+            randomness: preset.randomness,
+            generator: 'grid',
+            brickSettings: undefined,
+        };
+        setBrickControlsVisible(false);
+    }
 
     syncUIToSettings();
     uiState.onSettingsChange(uiState.settings);
@@ -281,6 +328,27 @@ function syncUIToSettings(): void {
 
     // Edit mode
     getElement<HTMLInputElement>('edit-mode').checked = editMode;
+
+    // Brick controls
+    if (settings.generator === 'brick' && settings.brickSettings) {
+        const bs = settings.brickSettings;
+        (document.getElementById('brick-style') as HTMLSelectElement).value = bs.brickStyle;
+        (document.getElementById('brick-width') as HTMLInputElement).value = String(bs.brickWidth);
+        (document.getElementById('brick-width-value') as HTMLSpanElement).textContent = String(bs.brickWidth);
+        (document.getElementById('brick-height') as HTMLInputElement).value = String(bs.brickHeight);
+        (document.getElementById('brick-height-value') as HTMLSpanElement).textContent = String(bs.brickHeight);
+        (document.getElementById('mortar-thickness') as HTMLInputElement).value = String(bs.mortarThickness);
+        (document.getElementById('mortar-thickness-value') as HTMLSpanElement).textContent = String(bs.mortarThickness);
+        (document.getElementById('brick-variation') as HTMLInputElement).value = String(bs.brickVariation);
+        (document.getElementById('brick-variation-value') as HTMLSpanElement).textContent = bs.brickVariation.toFixed(2);
+        (document.getElementById('moss-density') as HTMLInputElement).value = String(bs.mossDensity);
+        (document.getElementById('moss-density-value') as HTMLSpanElement).textContent = bs.mossDensity.toFixed(2);
+        (document.getElementById('brick-base-color') as HTMLInputElement).value = bs.brickBaseColor;
+        (document.getElementById('mortar-color') as HTMLInputElement).value = bs.mortarColor;
+        (document.getElementById('show-cracks') as HTMLInputElement).checked = bs.showCracks;
+        (document.getElementById('optimize-svg') as HTMLInputElement).checked = bs.optimizeSVG;
+        syncMossDensityRow(bs.brickStyle);
+    }
 
     // Colors
     renderColorList();
@@ -585,10 +653,96 @@ export function initUI(callbacks: {
         }
     });
 
+    // Brick controls
+    initBrickControls(debouncedSettingsChange);
+
     // Initial sync
     syncUIToSettings();
 
     return initialSettings;
+}
+
+/**
+ * Wires all brick control inputs to update brickSettings on uiState.
+ * Called once from initUI().
+ */
+function initBrickControls(onChange: (s: PatternSettings) => void): void {
+    const section = document.getElementById('brick-controls');
+    if (!section) return;
+
+    /** Helper: apply a partial update and emit */
+    function updateBs(patch: Partial<import('./types').BrickSettings>): void {
+        if (!uiState || !uiState.settings.brickSettings) return;
+        uiState.settings = {
+            ...uiState.settings,
+            brickSettings: { ...uiState.settings.brickSettings, ...patch },
+        };
+        onChange(uiState.settings);
+    }
+
+    // Style selector
+    const styleEl = document.getElementById('brick-style') as HTMLSelectElement;
+    styleEl?.addEventListener('change', () => {
+        const style = styleEl.value as import('./types').BrickStyle;
+        updateBs({ brickStyle: style });
+        syncMossDensityRow(style);
+    });
+
+    // Brick width
+    const bwEl = document.getElementById('brick-width') as HTMLInputElement;
+    bwEl?.addEventListener('input', () => {
+        const v = parseInt(bwEl.value, 10);
+        (document.getElementById('brick-width-value') as HTMLSpanElement).textContent = String(v);
+        updateBs({ brickWidth: v });
+    });
+
+    // Brick height
+    const bhEl = document.getElementById('brick-height') as HTMLInputElement;
+    bhEl?.addEventListener('input', () => {
+        const v = parseInt(bhEl.value, 10);
+        (document.getElementById('brick-height-value') as HTMLSpanElement).textContent = String(v);
+        updateBs({ brickHeight: v });
+    });
+
+    // Mortar thickness
+    const mtEl = document.getElementById('mortar-thickness') as HTMLInputElement;
+    mtEl?.addEventListener('input', () => {
+        const v = parseInt(mtEl.value, 10);
+        (document.getElementById('mortar-thickness-value') as HTMLSpanElement).textContent = String(v);
+        updateBs({ mortarThickness: v });
+    });
+
+    // Brick variation
+    const bvEl = document.getElementById('brick-variation') as HTMLInputElement;
+    bvEl?.addEventListener('input', () => {
+        const v = parseFloat(bvEl.value);
+        (document.getElementById('brick-variation-value') as HTMLSpanElement).textContent = v.toFixed(2);
+        updateBs({ brickVariation: v });
+    });
+
+    // Moss density
+    const mdEl = document.getElementById('moss-density') as HTMLInputElement;
+    mdEl?.addEventListener('input', () => {
+        const v = parseFloat(mdEl.value);
+        (document.getElementById('moss-density-value') as HTMLSpanElement).textContent = v.toFixed(2);
+        updateBs({ mossDensity: v });
+    });
+
+    // Brick base color
+    const bbcEl = document.getElementById('brick-base-color') as HTMLInputElement;
+    bbcEl?.addEventListener('input', () => updateBs({ brickBaseColor: bbcEl.value }));
+
+    // Mortar color
+    const mcEl = document.getElementById('mortar-color') as HTMLInputElement;
+    mcEl?.addEventListener('input', () => updateBs({ mortarColor: mcEl.value }));
+
+    // Show cracks checkbox
+    const scEl = document.getElementById('show-cracks') as HTMLInputElement;
+    scEl?.addEventListener('change', () => updateBs({ showCracks: scEl.checked }));
+
+    // Optimize SVG checkbox
+    const osEl = document.getElementById('optimize-svg') as HTMLInputElement;
+    osEl?.addEventListener('change', () => updateBs({ optimizeSVG: osEl.checked }));
 }
 
 /**

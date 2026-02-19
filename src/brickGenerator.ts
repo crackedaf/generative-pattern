@@ -123,7 +123,6 @@ function generateMossPatches(
     const cols = 4, rows = 4;
     const blockW = brick.width / cols;
     const blockH = brick.height / rows;
-    const halfW = brick.width / 2;
 
     for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -219,10 +218,10 @@ function mirrorCell(
     src: BrickCell,
     newX: number,
     newY: number,
-    canvasWidth: number,
-    canvasHeight: number,
-    flipH: boolean,
-    flipV: boolean
+    _canvasWidth: number,
+    _canvasHeight: number,
+    _flipH: boolean,
+    _flipV: boolean
 ): BrickCell {
     const dx = newX - src.x;
     const dy = newY - src.y;

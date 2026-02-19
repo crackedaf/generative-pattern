@@ -4,7 +4,7 @@
 
 import type { PatternSettings } from './types';
 import { hexToRgb, colorDistance, safeColor } from './gradient';
-import { getGridDimensions, getCellKey, generateCellData } from './renderer';
+import { getCellKey, generateCellData } from './renderer';
 
 /** Tolerance for color matching (0-100) */
 const DEFAULT_TOLERANCE = 10;

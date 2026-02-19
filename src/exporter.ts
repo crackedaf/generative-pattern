@@ -4,7 +4,7 @@
 
 import type { PatternSettings } from './types';
 import { MAX_CANVAS_PIXELS } from './types';
-import { generateCellData, getCellKey } from './renderer';
+import { generateCellData } from './renderer';
 import { mulberry32 } from './rng';
 import { generateBricks, generateBrickSVGElements } from './brickGenerator';
 
@@ -53,7 +53,23 @@ export async function exportPNG(
         console.warn(warning);
     }
 
-    // Create a temporary canvas at full resolution with DPI scaling
+    // For brick mode, export the existing canvas directly (already rendered)
+    if (settings.generator === 'brick') {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(blob => {
+                if (!blob) { reject(new Error('Failed to export canvas')); return; }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = generateFilename(settings, 'png');
+                a.click();
+                URL.revokeObjectURL(url);
+                resolve();
+            }, 'image/png');
+        });
+    }
+
+    // Grid mode: Create a temporary canvas at full resolution with DPI scaling
     const dpr = window.devicePixelRatio || 1;
     const exportCanvas = document.createElement('canvas');
     exportCanvas.width = settings.width * dpr;
@@ -137,7 +153,7 @@ export function generateSVGString(
 
     // Generate rect elements grouped by color
     for (const [color, colorCells] of cellsByColor) {
-        lines.push(`  <g fill="${color}"`);
+        lines.push(`  <g fill="${color}">`);
 
         for (const cell of colorCells) {
             // Use integer coordinates for crisp rendering

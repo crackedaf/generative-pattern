@@ -5,8 +5,8 @@
 
 import './style.css';
 import type { PatternSettings, BrushSettings } from './types';
-import { renderPattern, queueRender } from './renderer';
-import { initUI, setBrushColor, getSettings } from './ui';
+import { queueRender } from './renderer';
+import { initUI, setBrushColor } from './ui';
 import {
   initPixelEditor,
   updateEditorSettings,
@@ -17,7 +17,6 @@ import {
 } from './pixelEditor';
 import { exportPNG, exportSVG } from './exporter';
 import { replaceColorGlobal } from './colorReplacer';
-import { mulberry32 } from './rng';
 
 // Application state
 let canvas: HTMLCanvasElement;
