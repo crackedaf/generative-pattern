@@ -5,6 +5,7 @@
 import type { PatternSettings, CellColorMode } from './types';
 import { createGradientSampler, hexToRgb, lerpColor, rgbToHex, safeColor } from './gradient';
 import { mulberry32 } from './rng';
+import { generateBricks, renderBricksToCanvas } from './brickGenerator';
 
 /** Grid cell data for rendering */
 interface CellData {
@@ -246,6 +247,15 @@ export function renderPattern(
     settings: PatternSettings,
     overrides: Map<string, string>
 ): void {
+    // Brick generator path
+    if (settings.generator === 'brick' && settings.brickSettings) {
+        const rng = mulberry32(settings.seed);
+        const cells = generateBricks(settings, rng);
+        renderBricksToCanvas(ctx, cells, settings);
+        return;
+    }
+
+    // Default grid path
     const cells = generateCellData(settings, overrides);
 
     // Clear canvas

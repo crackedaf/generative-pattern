@@ -2,6 +2,63 @@
  * Core type definitions for the Generative Pattern application
  */
 
+/** Active generator strategy */
+export type GeneratorType = 'grid' | 'brick';
+
+/** Brick texture style variants */
+export type BrickStyle = 'RedBrick' | 'MossyBrick';
+
+/** A moss patch rendered on a brick face */
+export interface MossPatch {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string; // hex
+}
+
+/** A subtle crack line rendered inside a brick */
+export interface BrickCrack {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Computed brick cell ready for rendering */
+export interface BrickCell {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string; // hex
+  mossPatchs: MossPatch[];
+  cracks: BrickCrack[];
+}
+
+/** Settings specific to the brick pattern generator */
+export interface BrickSettings {
+  brickStyle: BrickStyle;
+  /** px — clamped to ≥ 5 */
+  brickWidth: number;
+  /** px — clamped to ≥ 5 */
+  brickHeight: number;
+  /** px — clamped to < brickWidth */
+  mortarThickness: number;
+  /** 0–1 — only used when brickStyle = MossyBrick */
+  mossDensity: number;
+  /** Base hex colour for bricks */
+  brickBaseColor: string;
+  /** Hex colour for mortar joints */
+  mortarColor: string;
+  /** 0–1 — strength of per-brick colour deviation */
+  brickVariation: number;
+  /** Render subtle deterministic crack lines */
+  showCracks: boolean;
+  /** Skip moss patches under 3 px for smaller SVG output */
+  optimizeSVG: boolean;
+}
+
 /** RGB color representation with values 0-255 */
 export interface RGB {
   r: number;
@@ -16,7 +73,7 @@ export interface ColorStop {
 }
 
 /** Gradient direction options */
-export type GradientDirection = 
+export type GradientDirection =
   | 'top-bottom'
   | 'bottom-top'
   | 'left-right'
@@ -56,6 +113,10 @@ export interface PatternSettings {
   symmetry: SymmetrySettings;
   tileMode: boolean;
   cellColorMode: CellColorMode;
+  /** Active generator strategy — defaults to 'grid' */
+  generator?: GeneratorType;
+  /** Required when generator === 'brick' */
+  brickSettings?: BrickSettings;
 }
 
 /** Saved palette for localStorage */
@@ -73,6 +134,10 @@ export interface Preset {
   cellSize: number;
   direction: GradientDirection;
   randomness: number;
+  /** Set to 'brick' for brick presets */
+  generator?: GeneratorType;
+  /** Required when generator === 'brick' */
+  brickSettings?: BrickSettings;
 }
 
 /** Application state */

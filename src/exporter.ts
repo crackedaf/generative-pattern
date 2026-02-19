@@ -5,6 +5,8 @@
 import type { PatternSettings } from './types';
 import { MAX_CANVAS_PIXELS } from './types';
 import { generateCellData, getCellKey } from './renderer';
+import { mulberry32 } from './rng';
+import { generateBricks, generateBrickSVGElements } from './brickGenerator';
 
 /**
  * Generates a filename with timestamp, seed, and palette info
@@ -99,19 +101,30 @@ export function generateSVGString(
     settings: PatternSettings,
     overrides: Map<string, string>
 ): string {
-    const cells = generateCellData(settings, overrides);
-
     // Build SVG header with metadata
     const lines: string[] = [
         `<?xml version="1.0" encoding="UTF-8"?>`,
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${settings.width} ${settings.height}" width="${settings.width}" height="${settings.height}"`,
         `  data-seed="${settings.seed}"`,
+        `  data-generator="${settings.generator ?? 'grid'}"`,
         `  data-cell-size="${settings.cellSize}"`,
         `  data-direction="${settings.direction}"`,
         `  data-randomness="${settings.randomness}"`,
         `  data-colors="${settings.colors.join(',')}"`,
-        `  data-generator="generative-pattern">`,
+        `  data-generator-app="generative-pattern">`,
     ];
+
+    // Brick generator path — pure vector <rect> elements
+    if (settings.generator === 'brick' && settings.brickSettings) {
+        const rng = mulberry32(settings.seed);
+        const cells = generateBricks(settings, rng);
+        lines.push(...generateBrickSVGElements(cells, settings));
+        lines.push(`</svg>`);
+        return lines.join('\n');
+    }
+
+    // Default grid path
+    const cells = generateCellData(settings, overrides);
 
     // Group cells by color to reduce SVG size
     const cellsByColor = new Map<string, typeof cells>();
@@ -124,7 +137,7 @@ export function generateSVGString(
 
     // Generate rect elements grouped by color
     for (const [color, colorCells] of cellsByColor) {
-        lines.push(`  <g fill="${color}">`);
+        lines.push(`  <g fill="${color}"`);
 
         for (const cell of colorCells) {
             // Use integer coordinates for crisp rendering
