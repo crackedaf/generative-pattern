@@ -2,7 +2,16 @@
  * UI controller - manages all control panel interactions
  */
 
-import type { PatternSettings, BrushSettings, Palette, Preset, GradientDirection } from './types';
+import type {
+    BrickSettings,
+    BrickStyle,
+    BrickTextureMode,
+    BrushSettings,
+    GradientDirection,
+    Palette,
+    PatternSettings,
+    Preset,
+} from './types';
 import { DEFAULT_SETTINGS, DEFAULT_BRUSH, MAX_COLORS, MAX_BRUSH_SIZE, MIN_BRUSH_SIZE, MAX_CANVAS_PIXELS } from './types';
 import { PRESETS } from './presets';
 import { isValidHex, safeColor } from './gradient';
@@ -14,6 +23,18 @@ const STORAGE_SETTINGS = 'generative-pattern-settings';
 
 /** Debounce timer */
 let debounceTimer: number | null = null;
+const DEFAULT_TEXTURE_PRESET_NAME = PRESETS.find(p => p.generator !== 'brick')?.name ?? PRESETS[0]?.name ?? '';
+
+function withBrickTextureDefaults(brickSettings: BrickSettings): BrickSettings {
+    return {
+        ...brickSettings,
+        brickTextureMode: brickSettings.brickTextureMode ?? 'solid',
+        texturePresetName: brickSettings.texturePresetName ?? DEFAULT_TEXTURE_PRESET_NAME,
+        textureRandomizePerBrick: brickSettings.textureRandomizePerBrick ?? false,
+        textureScale: brickSettings.textureScale ?? 1,
+        textureRotation: brickSettings.textureRotation ?? 0,
+    };
+}
 
 /**
  * UI State and callbacks
@@ -237,6 +258,7 @@ function setBrickControlsVisible(visible: boolean): void {
     // Moss density row is only shown when MossyBrick is selected
     if (visible && uiState?.settings.brickSettings) {
         syncMossDensityRow(uiState.settings.brickSettings.brickStyle);
+        syncTexturePresetRow(uiState.settings.brickSettings.brickTextureMode);
     }
 }
 
@@ -248,6 +270,14 @@ function syncMossDensityRow(style: string): void {
     const input = document.getElementById('moss-density') as HTMLInputElement | null;
     if (row) row.style.display = style === 'MossyBrick' ? 'flex' : 'none';
     if (input) input.disabled = style !== 'MossyBrick';
+}
+
+function syncTexturePresetRow(mode: BrickTextureMode): void {
+    const row = document.getElementById('brick-texture-preset-row');
+    const select = document.getElementById('brick-texture-preset') as HTMLSelectElement | null;
+    const visible = mode === 'singlePreset';
+    if (row) row.style.display = visible ? 'flex' : 'none';
+    if (select) select.disabled = !visible;
 }
 
 /**
@@ -266,7 +296,7 @@ function loadPreset(preset: Preset): void {
             direction: preset.direction,
             randomness: preset.randomness,
             generator: 'brick',
-            brickSettings: { ...preset.brickSettings },
+            brickSettings: withBrickTextureDefaults({ ...preset.brickSettings }),
         };
         setBrickControlsVisible(true);
     } else {
@@ -331,8 +361,15 @@ function syncUIToSettings(): void {
 
     // Brick controls
     if (settings.generator === 'brick' && settings.brickSettings) {
-        const bs = settings.brickSettings;
+        const bs = withBrickTextureDefaults(settings.brickSettings);
         (document.getElementById('brick-style') as HTMLSelectElement).value = bs.brickStyle;
+        (document.getElementById('brick-texture-mode') as HTMLSelectElement).value = bs.brickTextureMode;
+        (document.getElementById('brick-texture-preset') as HTMLSelectElement).value = bs.texturePresetName;
+        (document.getElementById('brick-randomize-per-brick') as HTMLInputElement).checked = bs.textureRandomizePerBrick;
+        (document.getElementById('brick-texture-scale') as HTMLInputElement).value = String(bs.textureScale);
+        (document.getElementById('brick-texture-scale-value') as HTMLSpanElement).textContent = bs.textureScale.toFixed(2);
+        (document.getElementById('brick-texture-rotation') as HTMLInputElement).value = String(bs.textureRotation);
+        (document.getElementById('brick-texture-rotation-value') as HTMLSpanElement).textContent = `${Math.round(bs.textureRotation)}°`;
         (document.getElementById('brick-width') as HTMLInputElement).value = String(bs.brickWidth);
         (document.getElementById('brick-width-value') as HTMLSpanElement).textContent = String(bs.brickWidth);
         (document.getElementById('brick-height') as HTMLInputElement).value = String(bs.brickHeight);
@@ -348,6 +385,7 @@ function syncUIToSettings(): void {
         (document.getElementById('show-cracks') as HTMLInputElement).checked = bs.showCracks;
         (document.getElementById('optimize-svg') as HTMLInputElement).checked = bs.optimizeSVG;
         syncMossDensityRow(bs.brickStyle);
+        syncTexturePresetRow(bs.brickTextureMode);
     }
 
     // Colors
@@ -451,6 +489,13 @@ export function initUI(callbacks: {
         initialSettings = saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_SETTINGS };
     } catch {
         initialSettings = { ...DEFAULT_SETTINGS };
+    }
+
+    if (initialSettings.generator === 'brick' && initialSettings.brickSettings) {
+        initialSettings = {
+            ...initialSettings,
+            brickSettings: withBrickTextureDefaults(initialSettings.brickSettings),
+        };
     }
 
     uiState = {
@@ -671,21 +716,66 @@ function initBrickControls(onChange: (s: PatternSettings) => void): void {
     if (!section) return;
 
     /** Helper: apply a partial update and emit */
-    function updateBs(patch: Partial<import('./types').BrickSettings>): void {
+    function updateBs(patch: Partial<BrickSettings>): void {
         if (!uiState || !uiState.settings.brickSettings) return;
         uiState.settings = {
             ...uiState.settings,
-            brickSettings: { ...uiState.settings.brickSettings, ...patch },
+            brickSettings: withBrickTextureDefaults({ ...uiState.settings.brickSettings, ...patch }),
         };
         onChange(uiState.settings);
+    }
+
+    const texturePresetSelect = document.getElementById('brick-texture-preset') as HTMLSelectElement;
+    if (texturePresetSelect && texturePresetSelect.options.length === 0) {
+        PRESETS.forEach(preset => {
+            const option = document.createElement('option');
+            option.value = preset.name;
+            option.textContent = preset.name;
+            texturePresetSelect.appendChild(option);
+        });
     }
 
     // Style selector
     const styleEl = document.getElementById('brick-style') as HTMLSelectElement;
     styleEl?.addEventListener('change', () => {
-        const style = styleEl.value as import('./types').BrickStyle;
+        const style = styleEl.value as BrickStyle;
         updateBs({ brickStyle: style });
         syncMossDensityRow(style);
+    });
+
+    // Texture mode selector
+    const textureModeEl = document.getElementById('brick-texture-mode') as HTMLSelectElement;
+    textureModeEl?.addEventListener('change', () => {
+        const mode = textureModeEl.value as BrickTextureMode;
+        updateBs({ brickTextureMode: mode });
+        syncTexturePresetRow(mode);
+    });
+
+    // Texture preset selector
+    texturePresetSelect?.addEventListener('change', () => {
+        updateBs({ texturePresetName: texturePresetSelect.value });
+    });
+
+    // Randomize per brick
+    const randomizeTextureEl = document.getElementById('brick-randomize-per-brick') as HTMLInputElement;
+    randomizeTextureEl?.addEventListener('change', () => {
+        updateBs({ textureRandomizePerBrick: randomizeTextureEl.checked });
+    });
+
+    // Texture scale
+    const textureScaleEl = document.getElementById('brick-texture-scale') as HTMLInputElement;
+    textureScaleEl?.addEventListener('input', () => {
+        const value = parseFloat(textureScaleEl.value);
+        (document.getElementById('brick-texture-scale-value') as HTMLSpanElement).textContent = value.toFixed(2);
+        updateBs({ textureScale: value });
+    });
+
+    // Texture rotation
+    const textureRotationEl = document.getElementById('brick-texture-rotation') as HTMLInputElement;
+    textureRotationEl?.addEventListener('input', () => {
+        const value = parseInt(textureRotationEl.value, 10);
+        (document.getElementById('brick-texture-rotation-value') as HTMLSpanElement).textContent = `${value}°`;
+        updateBs({ textureRotation: value });
     });
 
     // Brick width

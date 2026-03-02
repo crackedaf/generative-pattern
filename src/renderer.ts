@@ -2,10 +2,17 @@
  * Canvas renderer for pattern generation
  */
 
-import type { PatternSettings } from './types';
+import type { PatternSettings, Preset } from './types';
 import { createGradientSampler, hexToRgb, rgbToHex, safeColor } from './gradient';
 import { mulberry32 } from './rng';
-import { generateBricks, renderBricksToCanvas } from './brickGenerator';
+import {
+    generateBricks,
+    renderBricksToCanvas,
+    type BrickTextureCanvasProvider,
+} from './brickGenerator';
+
+const brickTextureCanvasCache = new Map<string, HTMLCanvasElement>();
+const brickTextureCanvasProvider = createBrickTextureCanvasProvider();
 
 /** Grid cell data for rendering */
 interface CellData {
@@ -251,21 +258,66 @@ export function renderPattern(
     if (settings.generator === 'brick' && settings.brickSettings) {
         const rng = mulberry32(settings.seed);
         const cells = generateBricks(settings, rng);
-        renderBricksToCanvas(ctx, cells, settings);
+        renderBricksToCanvas(ctx, cells, settings, brickTextureCanvasProvider);
         return;
     }
 
-    // Default grid path
+    renderGridPatternToCanvas(ctx, settings, overrides, true);
+}
+
+function renderGridPatternToCanvas(
+    ctx: CanvasRenderingContext2D,
+    settings: PatternSettings,
+    overrides: Map<string, string>,
+    clearCanvas: boolean,
+): void {
     const cells = generateCellData(settings, overrides);
-
-    // Clear canvas
-    ctx.clearRect(0, 0, settings.width, settings.height);
-
-    // Draw cells
+    if (clearCanvas) {
+        ctx.clearRect(0, 0, settings.width, settings.height);
+    }
     for (const cell of cells) {
         ctx.fillStyle = cell.color;
         ctx.fillRect(cell.x, cell.y, cell.width, cell.height);
     }
+}
+
+function createBrickTextureCanvasProvider(): BrickTextureCanvasProvider {
+    return (preset: Preset, seed: number, scale: number): HTMLCanvasElement => {
+        const cacheKey = `${preset.name}::${seed}::${scale.toFixed(2)}`;
+        const cached = brickTextureCanvasCache.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
+        const size = Math.max(32, Math.min(256, Math.round(96 * scale)));
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+
+        const textureCtx = canvas.getContext('2d');
+        if (!textureCtx) {
+            throw new Error('Failed to create texture canvas context');
+        }
+
+        const textureSettings: PatternSettings = {
+            width: size,
+            height: size,
+            cellSize: Math.max(1, Math.round((preset.cellSize || 16) / Math.max(0.1, scale))),
+            colors: [...preset.colors],
+            direction: preset.direction,
+            randomness: preset.randomness,
+            seed,
+            symmetry: { horizontal: false, vertical: false },
+            tileMode: false,
+            cellColorMode: 'solid',
+            generator: 'grid',
+            brickSettings: undefined,
+        };
+
+        renderGridPatternToCanvas(textureCtx, textureSettings, new Map<string, string>(), true);
+        brickTextureCanvasCache.set(cacheKey, canvas);
+        return canvas;
+    };
 }
 
 /**

@@ -4,8 +4,36 @@
  * All randomness is driven by the global settings.seed via mulberry32 — fully deterministic.
  */
 
-import type { PatternSettings, BrickSettings, BrickCell, MossPatch, BrickCrack } from './types';
+import type {
+    BrickCell,
+    BrickCrack,
+    BrickSettings,
+    BrickTextureMode,
+    MossPatch,
+    PatternSettings,
+    Preset,
+} from './types';
 import { hexToRgb, rgbToHex } from './gradient';
+import { mulberry32 } from './rng';
+import { PRESETS } from './presets';
+
+const BRICK_TEXTURE_SEED_MULTIPLIER = 9973;
+
+const DEFAULT_BRICK_TEXTURE_SETTINGS = {
+    brickTextureMode: 'solid' as BrickTextureMode,
+    texturePresetName: PRESETS[0]?.name ?? '',
+    textureRandomizePerBrick: false,
+    textureScale: 1,
+    textureRotation: 0,
+};
+
+function getDefaultTexturePreset(): Preset {
+    const preset = PRESETS[0];
+    if (!preset) {
+        throw new Error('No presets configured for brick textures');
+    }
+    return preset;
+}
 
 // ---------------------------------------------------------------------------
 // Input guards
@@ -20,7 +48,25 @@ export function clampBrickSettings(s: BrickSettings): BrickSettings {
     const mortarThickness = Math.max(0, Math.min(brickWidth - 1, s.mortarThickness));
     const mossDensity = Math.max(0, Math.min(1, s.mossDensity));
     const brickVariation = Math.max(0, Math.min(1, s.brickVariation));
-    return { ...s, brickWidth, brickHeight, mortarThickness, mossDensity, brickVariation };
+    const textureScale = Math.max(0.1, Math.min(2, s.textureScale ?? DEFAULT_BRICK_TEXTURE_SETTINGS.textureScale));
+    const textureRotation = ((s.textureRotation ?? DEFAULT_BRICK_TEXTURE_SETTINGS.textureRotation) % 360 + 360) % 360;
+    const brickTextureMode = s.brickTextureMode ?? DEFAULT_BRICK_TEXTURE_SETTINGS.brickTextureMode;
+    const texturePresetName = s.texturePresetName ?? DEFAULT_BRICK_TEXTURE_SETTINGS.texturePresetName;
+    const textureRandomizePerBrick = s.textureRandomizePerBrick ?? DEFAULT_BRICK_TEXTURE_SETTINGS.textureRandomizePerBrick;
+
+    return {
+        ...s,
+        brickWidth,
+        brickHeight,
+        mortarThickness,
+        mossDensity,
+        brickVariation,
+        brickTextureMode,
+        texturePresetName,
+        textureRandomizePerBrick,
+        textureScale,
+        textureRotation,
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +226,57 @@ function generateCracks(
     return cracks;
 }
 
+function resolveTexturePresetByName(name: string): Preset {
+    return PRESETS.find(p => p.name === name) ?? getDefaultTexturePreset();
+}
+
+function resolveTexturePresetForCell(
+    mode: BrickTextureMode,
+    settings: BrickSettings,
+    textureSeed: number,
+    globalRandomPreset?: Preset,
+): Preset | undefined {
+    if (mode === 'solid') return undefined;
+    if (mode === 'singlePreset') {
+        return resolveTexturePresetByName(settings.texturePresetName);
+    }
+
+    if (!settings.textureRandomizePerBrick && globalRandomPreset) {
+        return globalRandomPreset;
+    }
+
+    const rng = mulberry32(textureSeed);
+    const index = Math.floor(rng() * PRESETS.length);
+    return PRESETS[index] ?? getDefaultTexturePreset();
+}
+
+function assignTextureData(cells: BrickCell[], settings: BrickSettings, baseSeed: number): BrickCell[] {
+    if (settings.brickTextureMode === 'solid') {
+        return cells.map(cell => ({ ...cell, texturePreset: undefined, textureSeed: undefined }));
+    }
+
+    let globalRandomPreset: Preset | undefined;
+    if (settings.brickTextureMode === 'randomPreset' && !settings.textureRandomizePerBrick) {
+        const globalRng = mulberry32(baseSeed);
+        globalRandomPreset = PRESETS[Math.floor(globalRng() * PRESETS.length)] ?? getDefaultTexturePreset();
+    }
+
+    return cells.map((cell, index) => {
+        const textureSeed = baseSeed + index * BRICK_TEXTURE_SEED_MULTIPLIER;
+        const texturePreset = resolveTexturePresetForCell(
+            settings.brickTextureMode,
+            settings,
+            textureSeed,
+            globalRandomPreset,
+        );
+        return {
+            ...cell,
+            texturePreset,
+            textureSeed,
+        };
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Symmetry helpers
 // ---------------------------------------------------------------------------
@@ -233,7 +330,17 @@ function mirrorCell(
         x: c.x + dx, y: c.y + dy, width: c.width, height: c.height,
     }));
 
-    return { x: newX, y: newY, width: src.width, height: src.height, color: src.color, mossPatchs, cracks };
+    return {
+        x: newX,
+        y: newY,
+        width: src.width,
+        height: src.height,
+        color: src.color,
+        mossPatchs,
+        cracks,
+        texturePreset: src.texturePreset,
+        textureSeed: src.textureSeed,
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -291,8 +398,8 @@ export function generateBricks(settings: PatternSettings, rng: () => number): Br
         }
     }
 
-    // Apply symmetry (mirror cells; mortar bg is always full-canvas, no mirroring needed)
-    return applyBrickSymmetry(cells, width, height, symmetry.horizontal, symmetry.vertical);
+    const symmetricCells = applyBrickSymmetry(cells, width, height, symmetry.horizontal, symmetry.vertical);
+    return assignTextureData(symmetricCells, bs, settings.seed);
 }
 
 // ---------------------------------------------------------------------------
@@ -303,10 +410,17 @@ export function generateBricks(settings: PatternSettings, rng: () => number): Br
  * Renders pre-generated brick cells to a 2D canvas context.
  * Call inside renderPattern() — does NOT call generateBricks() internally.
  */
+export type BrickTextureCanvasProvider = (
+    preset: Preset,
+    seed: number,
+    scale: number,
+) => HTMLCanvasElement;
+
 export function renderBricksToCanvas(
     ctx: CanvasRenderingContext2D,
     cells: BrickCell[],
-    settings: PatternSettings
+    settings: PatternSettings,
+    textureCanvasProvider?: BrickTextureCanvasProvider,
 ): void {
     const bs = clampBrickSettings(settings.brickSettings!);
 
@@ -321,11 +435,30 @@ export function renderBricksToCanvas(
 
     // Crack colour: dark semi-transparent overlay (use fixed dark hex)
     const CRACK_COLOR = '#1a0a00';
+    const rotationRadians = (bs.textureRotation * Math.PI) / 180;
 
     for (const cell of cells) {
-        // Brick body
-        ctx.fillStyle = cell.color;
-        ctx.fillRect(cell.x, cell.y, cell.width, cell.height);
+        if (cell.texturePreset && typeof cell.textureSeed === 'number' && textureCanvasProvider) {
+            const textureCanvas = textureCanvasProvider(cell.texturePreset, cell.textureSeed, bs.textureScale);
+            const centerX = cell.x + cell.width / 2;
+            const centerY = cell.y + cell.height / 2;
+            const drawWidth = cell.width * bs.textureScale;
+            const drawHeight = cell.height * bs.textureScale;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(cell.x, cell.y, cell.width, cell.height);
+            ctx.clip();
+            ctx.translate(centerX, centerY);
+            if (rotationRadians !== 0) {
+                ctx.rotate(rotationRadians);
+            }
+            ctx.drawImage(textureCanvas, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = cell.color;
+            ctx.fillRect(cell.x, cell.y, cell.width, cell.height);
+        }
 
         // Moss patches
         for (const p of cell.mossPatchs) {
@@ -354,7 +487,8 @@ export function renderBricksToCanvas(
  */
 export function generateBrickSVGElements(
     cells: BrickCell[],
-    settings: PatternSettings
+    settings: PatternSettings,
+    textureSVGProvider?: (preset: Preset, seed: number, width: number, height: number) => string[],
 ): string[] {
     const bs = clampBrickSettings(settings.brickSettings!);
     const lines: string[] = [];
@@ -368,9 +502,32 @@ export function generateBrickSVGElements(
 
     const CRACK_COLOR = '#1a0a00';
 
-    // Group bricks by colour to reduce SVG size
+    const solidCells: BrickCell[] = [];
+    const texturedCells: Array<{ cell: BrickCell; clipId: string }> = [];
+
+    for (let index = 0; index < cells.length; index++) {
+        const cell = cells[index];
+        if (cell.texturePreset && typeof cell.textureSeed === 'number' && textureSVGProvider) {
+            texturedCells.push({ cell, clipId: `brick-clip-${index}` });
+        } else {
+            solidCells.push(cell);
+        }
+    }
+
+    if (texturedCells.length > 0) {
+        lines.push('  <defs>');
+        for (const { cell, clipId } of texturedCells) {
+            lines.push(`    <clipPath id="${clipId}">`);
+            lines.push(
+                `      <rect x="${Math.round(cell.x)}" y="${Math.round(cell.y)}" width="${Math.round(cell.width)}" height="${Math.round(cell.height)}"/>`,
+            );
+            lines.push('    </clipPath>');
+        }
+        lines.push('  </defs>');
+    }
+
     const bricksByColor = new Map<string, BrickCell[]>();
-    for (const cell of cells) {
+    for (const cell of solidCells) {
         const arr = bricksByColor.get(cell.color) ?? [];
         arr.push(cell);
         bricksByColor.set(cell.color, arr);
@@ -379,13 +536,41 @@ export function generateBrickSVGElements(
     for (const [color, group] of bricksByColor) {
         lines.push(`  <g fill="${color}">`);
         for (const cell of group) {
-            const x = Math.round(cell.x);
-            const y = Math.round(cell.y);
-            const w = Math.round(cell.width);
-            const h = Math.round(cell.height);
-            lines.push(`    <rect x="${x}" y="${y}" width="${w}" height="${h}"/>`);
+            lines.push(
+                `    <rect x="${Math.round(cell.x)}" y="${Math.round(cell.y)}" width="${Math.round(cell.width)}" height="${Math.round(cell.height)}"/>`,
+            );
         }
-        lines.push(`  </g>`);
+        lines.push('  </g>');
+    }
+
+    if (textureSVGProvider) {
+        for (const { cell, clipId } of texturedCells) {
+            const texturePreset = cell.texturePreset;
+            const textureSeed = cell.textureSeed;
+            if (!texturePreset || typeof textureSeed !== 'number') continue;
+
+            const w = Math.max(1, Math.round(cell.width));
+            const h = Math.max(1, Math.round(cell.height));
+            const tx = Math.round(cell.x);
+            const ty = Math.round(cell.y);
+            const centerX = w / 2;
+            const centerY = h / 2;
+
+            lines.push(`  <g clip-path="url(#${clipId})">`);
+            lines.push(`    <g transform="translate(${tx} ${ty})">`);
+            lines.push(
+                `      <g transform="translate(${centerX} ${centerY}) rotate(${bs.textureRotation}) scale(${bs.textureScale}) translate(${-centerX} ${-centerY})">`,
+            );
+
+            const miniatureLines = textureSVGProvider(texturePreset, textureSeed, w, h);
+            for (const miniatureLine of miniatureLines) {
+                lines.push(`        ${miniatureLine.trimStart()}`);
+            }
+
+            lines.push('      </g>');
+            lines.push('    </g>');
+            lines.push('  </g>');
+        }
     }
 
     // Moss patches (grouped by colour)

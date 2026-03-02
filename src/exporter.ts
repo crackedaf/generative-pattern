@@ -2,7 +2,7 @@
  * Export module for PNG and SVG generation
  */
 
-import type { PatternSettings } from './types';
+import type { PatternSettings, Preset } from './types';
 import { MAX_CANVAS_PIXELS } from './types';
 import { generateCellData } from './renderer';
 import { mulberry32 } from './rng';
@@ -134,12 +134,26 @@ export function generateSVGString(
     if (settings.generator === 'brick' && settings.brickSettings) {
         const rng = mulberry32(settings.seed);
         const cells = generateBricks(settings, rng);
-        lines.push(...generateBrickSVGElements(cells, settings));
+        lines.push(
+            ...generateBrickSVGElements(
+                cells,
+                settings,
+                (preset, seed, width, height) => generateTextureSVGElements(preset, seed, width, height),
+            ),
+        );
         lines.push(`</svg>`);
         return lines.join('\n');
     }
 
-    // Default grid path
+    lines.push(...generateGridSVGElements(settings, overrides));
+
+    lines.push(`</svg>`);
+
+    return lines.join('\n');
+}
+
+function generateGridSVGElements(settings: PatternSettings, overrides: Map<string, string>): string[] {
+    const lines: string[] = [];
     const cells = generateCellData(settings, overrides);
 
     // Group cells by color to reduce SVG size
@@ -168,9 +182,30 @@ export function generateSVGString(
         lines.push(`  </g>`);
     }
 
-    lines.push(`</svg>`);
+    return lines;
+}
 
-    return lines.join('\n');
+function generateTextureSVGElements(
+    preset: Preset,
+    seed: number,
+    width: number,
+    height: number,
+): string[] {
+    const textureSettings: PatternSettings = {
+        width,
+        height,
+        cellSize: Math.max(1, preset.cellSize),
+        colors: [...preset.colors],
+        direction: preset.direction,
+        randomness: preset.randomness,
+        seed,
+        symmetry: { horizontal: false, vertical: false },
+        tileMode: false,
+        cellColorMode: 'solid',
+        generator: 'grid',
+        brickSettings: undefined,
+    };
+    return generateGridSVGElements(textureSettings, new Map<string, string>());
 }
 
 /**

@@ -8,6 +8,9 @@ export type GeneratorType = 'grid' | 'brick';
 /** Brick texture style variants */
 export type BrickStyle = 'RedBrick' | 'MossyBrick';
 
+/** Brick interior texture mode */
+export type BrickTextureMode = 'solid' | 'singlePreset' | 'randomPreset';
+
 /** A moss patch rendered on a brick face */
 export interface MossPatch {
   x: number;
@@ -34,6 +37,8 @@ export interface BrickCell {
   color: string; // hex
   mossPatchs: MossPatch[];
   cracks: BrickCrack[];
+  texturePreset?: Preset;
+  textureSeed?: number;
 }
 
 /** Settings specific to the brick pattern generator */
@@ -57,6 +62,16 @@ export interface BrickSettings {
   showCracks: boolean;
   /** Skip moss patches under 3 px for smaller SVG output */
   optimizeSVG: boolean;
+  /** Brick texture fill mode */
+  brickTextureMode: BrickTextureMode;
+  /** Selected preset name when brickTextureMode = 'singlePreset' */
+  texturePresetName: string;
+  /** Randomize texture preset assignment per brick when supported by mode */
+  textureRandomizePerBrick: boolean;
+  /** Scale multiplier for texture rendering (0.1-2.0) */
+  textureScale: number;
+  /** Rotation angle in degrees for texture rendering */
+  textureRotation: number;
 }
 
 /** RGB color representation with values 0-255 */
