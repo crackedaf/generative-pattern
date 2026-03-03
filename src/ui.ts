@@ -371,9 +371,9 @@ function syncUIToSettings(): void {
         (document.getElementById('brick-texture-rotation') as HTMLInputElement).value = String(bs.textureRotation);
         (document.getElementById('brick-texture-rotation-value') as HTMLSpanElement).textContent = `${Math.round(bs.textureRotation)}°`;
         (document.getElementById('brick-width') as HTMLInputElement).value = String(bs.brickWidth);
-        (document.getElementById('brick-width-value') as HTMLSpanElement).textContent = String(bs.brickWidth);
+        (document.getElementById('brick-width-value') as HTMLSpanElement).textContent = `${bs.brickWidth}px`;
         (document.getElementById('brick-height') as HTMLInputElement).value = String(bs.brickHeight);
-        (document.getElementById('brick-height-value') as HTMLSpanElement).textContent = String(bs.brickHeight);
+        (document.getElementById('brick-height-value') as HTMLSpanElement).textContent = `${bs.brickHeight}px`;
         (document.getElementById('mortar-thickness') as HTMLInputElement).value = String(bs.mortarThickness);
         (document.getElementById('mortar-thickness-value') as HTMLSpanElement).textContent = String(bs.mortarThickness);
         (document.getElementById('brick-variation') as HTMLInputElement).value = String(bs.brickVariation);
@@ -782,7 +782,7 @@ function initBrickControls(onChange: (s: PatternSettings) => void): void {
     const bwEl = document.getElementById('brick-width') as HTMLInputElement;
     bwEl?.addEventListener('input', () => {
         const v = parseInt(bwEl.value, 10);
-        (document.getElementById('brick-width-value') as HTMLSpanElement).textContent = String(v);
+        (document.getElementById('brick-width-value') as HTMLSpanElement).textContent = `${v}px`;
         updateBs({ brickWidth: v });
     });
 
@@ -790,7 +790,7 @@ function initBrickControls(onChange: (s: PatternSettings) => void): void {
     const bhEl = document.getElementById('brick-height') as HTMLInputElement;
     bhEl?.addEventListener('input', () => {
         const v = parseInt(bhEl.value, 10);
-        (document.getElementById('brick-height-value') as HTMLSpanElement).textContent = String(v);
+        (document.getElementById('brick-height-value') as HTMLSpanElement).textContent = `${v}px`;
         updateBs({ brickHeight: v });
     });
 
