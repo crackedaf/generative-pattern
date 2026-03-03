@@ -54,6 +54,50 @@ interface UIState {
 }
 
 let uiState: UIState | null = null;
+type PresetMode = 'grid' | 'brick';
+
+function getPresetModeFromSettings(settings: PatternSettings): PresetMode {
+    return settings.generator === 'brick' ? 'brick' : 'grid';
+}
+
+function getPresetModeFromPreset(preset: Preset): PresetMode {
+    return preset.generator === 'brick' ? 'brick' : 'grid';
+}
+
+function setPresetModeToggle(mode: PresetMode): void {
+    const toggle = document.getElementById('preset-mode-toggle') as HTMLButtonElement | null;
+    if (!toggle) return;
+    toggle.dataset.mode = mode;
+    toggle.textContent = mode === 'brick' ? 'Brick Presets' : 'Grid Presets';
+    toggle.setAttribute('aria-pressed', mode === 'brick' ? 'true' : 'false');
+}
+
+function getPresetModeFromToggle(): PresetMode {
+    const toggle = document.getElementById('preset-mode-toggle') as HTMLButtonElement | null;
+    return toggle?.dataset.mode === 'brick' ? 'brick' : 'grid';
+}
+
+function renderPresetOptions(mode: PresetMode): void {
+    const presetSelect = document.getElementById('presets') as HTMLSelectElement | null;
+    if (!presetSelect) return;
+
+    presetSelect.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = mode === 'brick' ? 'Select brick preset...' : 'Select preset...';
+    presetSelect.appendChild(placeholder);
+
+    PRESETS.forEach((preset, index) => {
+        const presetMode = getPresetModeFromPreset(preset);
+        if (presetMode !== mode) return;
+
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = preset.name;
+        presetSelect.appendChild(option);
+    });
+}
 
 /**
  * Debounced callback
@@ -285,6 +329,10 @@ function syncTexturePresetRow(mode: BrickTextureMode): void {
  */
 function loadPreset(preset: Preset): void {
     if (!uiState) return;
+
+    const mode = getPresetModeFromPreset(preset);
+    setPresetModeToggle(mode);
+    renderPresetOptions(mode);
 
     if (preset.generator === 'brick' && preset.brickSettings) {
         // Brick preset
@@ -610,11 +658,16 @@ export function initUI(callbacks: {
 
     // Preset select
     const presetSelect = getElement<HTMLSelectElement>('presets');
-    PRESETS.forEach((preset, index) => {
-        const option = document.createElement('option');
-        option.value = String(index);
-        option.textContent = preset.name;
-        presetSelect.appendChild(option);
+    const presetModeToggle = getElement<HTMLButtonElement>('preset-mode-toggle');
+    const initialPresetMode = getPresetModeFromSettings(initialSettings);
+    setPresetModeToggle(initialPresetMode);
+    renderPresetOptions(initialPresetMode);
+
+    presetModeToggle.addEventListener('click', () => {
+        const mode = getPresetModeFromToggle() === 'brick' ? 'grid' : 'brick';
+        setPresetModeToggle(mode);
+        renderPresetOptions(mode);
+        presetSelect.value = '';
     });
 
     presetSelect.addEventListener('change', () => {

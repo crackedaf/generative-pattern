@@ -331,6 +331,11 @@ button.danger:hover:not(:disabled) {
   flex: 1;
 }
 
+.mode-toggle-button {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
 /* Color list */
 .color-list {
   max-height: 200px;

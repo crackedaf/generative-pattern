@@ -194,6 +194,16 @@
         <div id="color-list" class="color-list" role="list" aria-label="Color palette"></div>
         <button type="button" id="add-color" class="secondary">+ Add Color</button>
         <div class="control-row" style="margin-top: 8px;">
+          <label for="preset-mode-toggle">Preset Mode</label>
+          <button
+            type="button"
+            id="preset-mode-toggle"
+            class="secondary mode-toggle-button"
+            aria-label="Toggle preset mode"
+            aria-pressed="false"
+            data-mode="grid">Grid Presets</button>
+        </div>
+        <div class="control-row" style="margin-top: 8px;">
           <label for="presets">Presets</label>
           <select id="presets" aria-label="Load preset palette">
             <option value="">Select preset...</option>
