@@ -3,7 +3,8 @@
  */
 
 import type { PatternSettings, BrushSettings } from './types';
-import { getGridDimensions, getCellKey, getColorAtCell } from './renderer';
+import { getCellKey, getColorAtCell } from './renderer';
+import { computeSnappedGrid, normalizeCellSize } from './gridUtils';
 
 /** Callback for when a cell is edited */
 export type OnCellEdit = (overrides: Map<string, string>) => void;
@@ -53,10 +54,36 @@ export function getCellFromCoords(
     y: number,
     cellSize: number
 ): { row: number; col: number } {
+    const normalizedCellSize = normalizeCellSize(cellSize);
     return {
-        row: Math.floor(y / cellSize),
-        col: Math.floor(x / cellSize),
+        row: Math.floor(y / normalizedCellSize),
+        col: Math.floor(x / normalizedCellSize),
     };
+}
+
+function getSnappedCellFromCoords(
+    x: number,
+    y: number,
+    settings: PatternSettings,
+): { row: number; col: number; rows: number; cols: number } | null {
+    const { rows, cols, renderWidth, renderHeight, offsetX, offsetY } = computeSnappedGrid(
+        settings.width,
+        settings.height,
+        settings.cellSize,
+    );
+
+    if (rows === 0 || cols === 0) {
+        return null;
+    }
+
+    const adjustedX = x - offsetX;
+    const adjustedY = y - offsetY;
+    if (adjustedX < 0 || adjustedY < 0 || adjustedX >= renderWidth || adjustedY >= renderHeight) {
+        return null;
+    }
+
+    const { row, col } = getCellFromCoords(adjustedX, adjustedY, settings.cellSize);
+    return { row, col, rows, cols };
 }
 
 /**
@@ -97,8 +124,12 @@ function applyBrush(
     y: number,
     state: EditorState
 ): void {
-    const { row, col } = getCellFromCoords(x, y, state.settings.cellSize);
-    const { rows, cols } = getGridDimensions(state.settings);
+    const cell = getSnappedCellFromCoords(x, y, state.settings);
+    if (!cell) {
+        return;
+    }
+
+    const { row, col, rows, cols } = cell;
 
     // Get all cells affected by brush
     const cells = getCellsInBrush(row, col, state.brush.size, rows, cols);
@@ -121,7 +152,12 @@ function pickColor(
     y: number,
     state: EditorState
 ): void {
-    const { row, col } = getCellFromCoords(x, y, state.settings.cellSize);
+    const cell = getSnappedCellFromCoords(x, y, state.settings);
+    if (!cell) {
+        return;
+    }
+
+    const { row, col } = cell;
     const color = getColorAtCell(row, col, state.settings, state.overrides);
     state.onColorPick(color);
 }

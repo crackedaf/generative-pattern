@@ -7,6 +7,7 @@ import { MAX_CANVAS_PIXELS } from './types';
 import { generateCellData } from './renderer';
 import { mulberry32 } from './rng';
 import { generateBricks, generateBrickSVGElements } from './brickGenerator';
+import { normalizeCellSize } from './gridUtils';
 
 /**
  * Generates a filename with timestamp, seed, and palette info
@@ -117,13 +118,15 @@ export function generateSVGString(
     settings: PatternSettings,
     overrides: Map<string, string>
 ): string {
+    const cellSize = normalizeCellSize(settings.cellSize);
+
     // Build SVG header with metadata
     const lines: string[] = [
         `<?xml version="1.0" encoding="UTF-8"?>`,
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${settings.width} ${settings.height}" width="${settings.width}" height="${settings.height}"`,
         `  data-seed="${settings.seed}"`,
         `  data-generator="${settings.generator ?? 'grid'}"`,
-        `  data-cell-size="${settings.cellSize}"`,
+        `  data-cell-size="${cellSize}"`,
         `  data-direction="${settings.direction}"`,
         `  data-randomness="${settings.randomness}"`,
         `  data-colors="${settings.colors.join(',')}"`,
@@ -194,7 +197,7 @@ function generateTextureSVGElements(
     const textureSettings: PatternSettings = {
         width,
         height,
-        cellSize: Math.max(1, preset.cellSize),
+        cellSize: normalizeCellSize(preset.cellSize),
         colors: [...preset.colors],
         direction: preset.direction,
         randomness: preset.randomness,

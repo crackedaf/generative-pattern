@@ -5,6 +5,7 @@
 import type { PatternSettings, Preset } from './types';
 import { createGradientSampler, hexToRgb, rgbToHex, safeColor } from './gradient';
 import { mulberry32 } from './rng';
+import { computeSnappedGrid, normalizeCellSize } from './gridUtils';
 import {
     generateBricks,
     renderBricksToCanvas,
@@ -29,9 +30,10 @@ interface CellData {
  * Calculates the grid dimensions based on settings
  */
 export function getGridDimensions(settings: PatternSettings): { rows: number; cols: number } {
+    const { rows, cols } = computeSnappedGrid(settings.width, settings.height, settings.cellSize);
     return {
-        cols: Math.ceil(settings.width / settings.cellSize),
-        rows: Math.ceil(settings.height / settings.cellSize),
+        cols,
+        rows,
     };
 }
 
@@ -168,7 +170,9 @@ export function generateCellData(
     settings: PatternSettings,
     overrides: Map<string, string>
 ): CellData[] {
-    const { rows, cols } = getGridDimensions(settings);
+    const snappedGrid = computeSnappedGrid(settings.width, settings.height, settings.cellSize);
+    const { rows, cols, offsetX, offsetY } = snappedGrid;
+    const cellSize = normalizeCellSize(settings.cellSize);
     const sampler = createGradientSampler(
         settings.colors.map(c => safeColor(c)),
         settings.direction
@@ -234,10 +238,10 @@ export function generateCellData(
             cells.push({
                 row,
                 col,
-                x: col * settings.cellSize,
-                y: row * settings.cellSize,
-                width: settings.cellSize,
-                height: settings.cellSize,
+                x: offsetX + col * cellSize,
+                y: offsetY + row * cellSize,
+                width: cellSize,
+                height: cellSize,
                 color,
             });
         }
@@ -302,7 +306,7 @@ function createBrickTextureCanvasProvider(): BrickTextureCanvasProvider {
         const textureSettings: PatternSettings = {
             width: size,
             height: size,
-            cellSize: Math.max(1, Math.round((preset.cellSize || 16) / Math.max(0.1, scale))),
+            cellSize: Math.max(1, Math.floor((preset.cellSize || 16) / Math.max(0.1, scale))),
             colors: [...preset.colors],
             direction: preset.direction,
             randomness: preset.randomness,
@@ -362,6 +366,11 @@ export function getColorAtCell(
     settings: PatternSettings,
     overrides: Map<string, string>
 ): string {
+    const { rows, cols } = getGridDimensions(settings);
+    if (row < 0 || row >= rows || col < 0 || col >= cols) {
+        return '#000000';
+    }
+
     const key = getCellKey(row, col);
 
     // Check override first
@@ -370,7 +379,6 @@ export function getColorAtCell(
     }
 
     // Generate the color
-    const { rows, cols } = getGridDimensions(settings);
     const sampler = createGradientSampler(
         settings.colors.map(c => safeColor(c)),
         settings.direction
