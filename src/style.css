@@ -456,7 +456,7 @@ button.danger:hover:not(:disabled) {
 }
 
 #canvas {
-  background: #ffffff;
+  background: transparent;
   box-shadow: var(--shadow-md);
   border-radius: var(--radius-sm);
   image-rendering: pixelated;
