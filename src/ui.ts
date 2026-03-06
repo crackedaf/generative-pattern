@@ -25,6 +25,10 @@ const STORAGE_SETTINGS = 'generative-pattern-settings';
 let debounceTimer: number | null = null;
 const DEFAULT_TEXTURE_PRESET_NAME = PRESETS.find(p => p.generator !== 'brick')?.name ?? PRESETS[0]?.name ?? '';
 
+function clampGradientBlendFactor(value: number): number {
+    return Math.max(0, Math.min(1, value));
+}
+
 function withBrickTextureDefaults(brickSettings: BrickSettings): BrickSettings {
     return {
         ...brickSettings,
@@ -324,6 +328,13 @@ function syncTexturePresetRow(mode: BrickTextureMode): void {
     if (select) select.disabled = !visible;
 }
 
+function syncGradientFactorControl(mode: PatternSettings['cellColorMode']): void {
+    const input = document.getElementById('gradient-factor') as HTMLInputElement | null;
+    if (input) {
+        input.disabled = mode !== 'gradient';
+    }
+}
+
 /**
  * Loads a preset
  */
@@ -343,6 +354,9 @@ function loadPreset(preset: Preset): void {
             cellSize: preset.cellSize,
             direction: preset.direction,
             randomness: preset.randomness,
+            gradientBlendFactor: clampGradientBlendFactor(
+                preset.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor
+            ),
             generator: 'brick',
             brickSettings: withBrickTextureDefaults({ ...preset.brickSettings }),
         };
@@ -356,6 +370,9 @@ function loadPreset(preset: Preset): void {
             cellSize: preset.cellSize,
             direction: preset.direction,
             randomness: preset.randomness,
+            gradientBlendFactor: clampGradientBlendFactor(
+                preset.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor
+            ),
             generator: 'grid',
             brickSettings: undefined,
         };
@@ -398,6 +415,12 @@ function syncUIToSettings(): void {
     // Cell color mode
     getElement<HTMLInputElement>('mode-solid').checked = settings.cellColorMode === 'solid';
     getElement<HTMLInputElement>('mode-gradient').checked = settings.cellColorMode === 'gradient';
+    const gradientFactor = clampGradientBlendFactor(
+        settings.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor
+    );
+    getElement<HTMLInputElement>('gradient-factor').value = gradientFactor.toFixed(2);
+    getElement<HTMLSpanElement>('gradient-factor-value').textContent = gradientFactor.toFixed(2);
+    syncGradientFactorControl(settings.cellColorMode);
 
     // Brush
     getElement<HTMLInputElement>('brush-size').value = String(brush.size);
@@ -546,6 +569,13 @@ export function initUI(callbacks: {
         };
     }
 
+    initialSettings = {
+        ...initialSettings,
+        gradientBlendFactor: clampGradientBlendFactor(
+            Number(initialSettings.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor)
+        ),
+    };
+
     uiState = {
         settings: initialSettings,
         brush: { ...DEFAULT_BRUSH },
@@ -611,6 +641,15 @@ export function initUI(callbacks: {
         debouncedSettingsChange(uiState!.settings);
     });
 
+    // Gradient blend factor slider
+    const gradientFactorInput = getElement<HTMLInputElement>('gradient-factor');
+    gradientFactorInput.addEventListener('input', () => {
+        const gradientBlendFactor = clampGradientBlendFactor(parseFloat(gradientFactorInput.value));
+        getElement<HTMLSpanElement>('gradient-factor-value').textContent = gradientBlendFactor.toFixed(2);
+        uiState!.settings = { ...uiState!.settings, gradientBlendFactor };
+        debouncedSettingsChange(uiState!.settings);
+    });
+
     // Seed input
     const seedInput = getElement<HTMLInputElement>('seed');
     seedInput.addEventListener('input', () => {
@@ -645,11 +684,13 @@ export function initUI(callbacks: {
     // Cell color mode
     getElement<HTMLInputElement>('mode-solid').addEventListener('change', () => {
         uiState!.settings = { ...uiState!.settings, cellColorMode: 'solid' };
+        syncGradientFactorControl('solid');
         callbacks.onSettingsChange(uiState!.settings);
     });
 
     getElement<HTMLInputElement>('mode-gradient').addEventListener('change', () => {
         uiState!.settings = { ...uiState!.settings, cellColorMode: 'gradient' };
+        syncGradientFactorControl('gradient');
         callbacks.onSettingsChange(uiState!.settings);
     });
 

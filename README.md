@@ -8,7 +8,7 @@ A local, offline-capable web application for generating abstract geometric patte
 
 - **Canvas Controls**: Width, height (up to 1,048,576 total pixels), and cell size
 - **20-Color Palette**: Add up to 20 colors with drag-and-drop reordering
-- **Gradient Engine**: Multi-stop linear gradient with 4 direction options
+- **Gradient Engine**: Multi-stop linear gradient with 4 direction options and adjustable blend factor
 - **Pixel Editor**: Manual cell editing with brush size control (1–32 cells)
 - **Color Replace**: Find and replace colors across the entire canvas
 - **Symmetry**: Horizontal and vertical mirroring
@@ -103,7 +103,7 @@ generative-pattern/
 - **Max Canvas**: 1,048,576 pixels (e.g., 1024×1024)
 - **Cell Color Modes**: 
   - **Solid**: Each cell is a single sampled color
-  - **Gradient**: Cells blend with neighbors
+  - **Gradient**: Cells blend with neighbors, controlled by blend factor (0-1)
 - **PRNG**: Uses mulberry32 algorithm for deterministic randomness
 - **No external dependencies** at runtime
 

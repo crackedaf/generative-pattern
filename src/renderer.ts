@@ -3,7 +3,7 @@
  */
 
 import type { PatternSettings, Preset } from './types';
-import { createGradientSampler, hexToRgb, rgbToHex, safeColor } from './gradient';
+import { createGradientSampler, hexToRgb, lerpColor, rgbToHex, safeColor } from './gradient';
 import { mulberry32 } from './rng';
 import { computeSnappedGrid, normalizeCellSize } from './gridUtils';
 import {
@@ -118,12 +118,17 @@ function blendCellColor(
     col: number,
     rows: number,
     cols: number,
-    cellColors: Map<string, string>
+    cellColors: Map<string, string>,
+    blendFactor: number,
 ): string {
     const neighbors: string[] = [];
     const centerColor = cellColors.get(getCellKey(row, col));
+    const normalizedBlendFactor = Number.isFinite(blendFactor)
+        ? Math.max(0, Math.min(1, blendFactor))
+        : 1;
 
     if (!centerColor) return '#000000';
+    if (normalizedBlendFactor <= 0) return centerColor;
 
     neighbors.push(centerColor);
 
@@ -156,11 +161,23 @@ function blendCellColor(
 
     if (count === 0) return centerColor;
 
-    return rgbToHex({
+    const fullBlendColor = rgbToHex({
         r: totalR / count,
         g: totalG / count,
         b: totalB / count,
     });
+
+    if (normalizedBlendFactor >= 1) {
+        return fullBlendColor;
+    }
+
+    const centerRgb = hexToRgb(centerColor);
+    const fullBlendRgb = hexToRgb(fullBlendColor);
+    if (!centerRgb || !fullBlendRgb) {
+        return fullBlendColor;
+    }
+
+    return rgbToHex(lerpColor(centerRgb, fullBlendRgb, normalizedBlendFactor));
 }
 
 /**
@@ -232,7 +249,14 @@ export function generateCellData(
 
             // Apply gradient blending for non-overridden cells
             if (settings.cellColorMode === 'gradient' && !overrides.has(key)) {
-                color = blendCellColor(row, col, rows, cols, cellColors);
+                color = blendCellColor(
+                    row,
+                    col,
+                    rows,
+                    cols,
+                    cellColors,
+                    settings.gradientBlendFactor,
+                );
             }
 
             cells.push({
@@ -314,6 +338,7 @@ function createBrickTextureCanvasProvider(): BrickTextureCanvasProvider {
             symmetry: { horizontal: false, vertical: false },
             tileMode: false,
             cellColorMode: 'solid',
+            gradientBlendFactor: 1,
             generator: 'grid',
             brickSettings: undefined,
         };

@@ -128,6 +128,8 @@ export interface PatternSettings {
   symmetry: SymmetrySettings;
   tileMode: boolean;
   cellColorMode: CellColorMode;
+  /** 0-1 blend strength for gradient cell mode (0 = base, 1 = full blend) */
+  gradientBlendFactor: number;
   /** Active generator strategy — defaults to 'grid' */
   generator?: GeneratorType;
   /** Required when generator === 'brick' */
@@ -149,6 +151,8 @@ export interface Preset {
   cellSize: number;
   direction: GradientDirection;
   randomness: number;
+  /** Optional 0-1 gradient blend strength */
+  gradientBlendFactor?: number;
   /** Set to 'brick' for brick presets */
   generator?: GeneratorType;
   /** Required when generator === 'brick' */
@@ -186,6 +190,7 @@ export const DEFAULT_SETTINGS: PatternSettings = {
   symmetry: { horizontal: false, vertical: false },
   tileMode: false,
   cellColorMode: 'solid',
+  gradientBlendFactor: 1,
 };
 
 /** Default brush settings */

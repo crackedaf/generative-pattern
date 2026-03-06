@@ -76,6 +76,7 @@ describe('generateSVGString', () => {
         expect(svg).toContain('data-seed="42"');
         expect(svg).toContain('data-cell-size="50"');
         expect(svg).toContain('data-direction="top-bottom"');
+        expect(svg).toContain('data-gradient-blend-factor="1"');
         expect(svg).toContain('data-generator-app="generative-pattern"');
     });
 

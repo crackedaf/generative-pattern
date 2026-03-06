@@ -129,6 +129,7 @@ export function generateSVGString(
         `  data-cell-size="${cellSize}"`,
         `  data-direction="${settings.direction}"`,
         `  data-randomness="${settings.randomness}"`,
+        `  data-gradient-blend-factor="${settings.gradientBlendFactor}"`,
         `  data-colors="${settings.colors.join(',')}"`,
         `  data-generator-app="generative-pattern">`,
     ];
@@ -205,6 +206,7 @@ function generateTextureSVGElements(
         symmetry: { horizontal: false, vertical: false },
         tileMode: false,
         cellColorMode: 'solid',
+        gradientBlendFactor: preset.gradientBlendFactor ?? 1,
         generator: 'grid',
         brickSettings: undefined,
     };
