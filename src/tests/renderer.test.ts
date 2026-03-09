@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { generateCellData } from '../renderer';
 import { DEFAULT_SETTINGS } from '../types';
 
-function getCellColor(cells: ReturnType<typeof generateCellData>, row: number, col: number): string {
+function getCell(cells: ReturnType<typeof generateCellData>, row: number, col: number) {
     const cell = cells.find(c => c.row === row && c.col === col);
     if (!cell) {
         throw new Error(`Missing cell at ${row},${col}`);
     }
-    return cell.color;
+    return cell;
+}
+
+function getCellColor(cells: ReturnType<typeof generateCellData>, row: number, col: number): string {
+    return getCell(cells, row, col).color;
 }
 
 function makeSettings(gradientBlendFactor: number) {
@@ -47,5 +51,39 @@ describe('generateCellData gradientBlendFactor', () => {
         };
         const cells = generateCellData(settings, new Map<string, string>());
         expect(getCellColor(cells, 0, 0)).toBe('#2b2b2b');
+    });
+});
+
+describe('generateCellData waveDistortion', () => {
+    it('keeps y positions unchanged when disabled', () => {
+        const settings = {
+            ...DEFAULT_SETTINGS,
+            width: 8,
+            height: 8,
+            cellSize: 2,
+            waveDistortion: {
+                enabled: false,
+                waves: [{ amplitude: 10, frequency: 0.2, phase: 0, influence: 1 }],
+            },
+        };
+        const cells = generateCellData(settings, new Map<string, string>());
+        expect(getCell(cells, 1, 2).y).toBe(2);
+    });
+
+    it('distorts y using center x sampling when enabled', () => {
+        const settings = {
+            ...DEFAULT_SETTINGS,
+            width: 8,
+            height: 8,
+            cellSize: 2,
+            waveDistortion: {
+                enabled: true,
+                waves: [{ amplitude: 10, frequency: 0.2, phase: 0, influence: 1 }],
+            },
+        };
+        const cells = generateCellData(settings, new Map<string, string>());
+        const cell = getCell(cells, 1, 2);
+        const expectedOffset = 10 * Math.sin(0.2 * (cell.x + cell.width / 2));
+        expect(cell.y).toBeCloseTo(2 + expectedOffset, 8);
     });
 });

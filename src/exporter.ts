@@ -130,6 +130,8 @@ export function generateSVGString(
         `  data-direction="${settings.direction}"`,
         `  data-randomness="${settings.randomness}"`,
         `  data-gradient-blend-factor="${settings.gradientBlendFactor}"`,
+        `  data-wave-distortion-enabled="${settings.waveDistortion?.enabled === true}"`,
+        `  data-wave-count="${settings.waveDistortion?.waves.length ?? 0}"`,
         `  data-colors="${settings.colors.join(',')}"`,
         `  data-generator-app="generative-pattern">`,
     ];
@@ -207,6 +209,7 @@ function generateTextureSVGElements(
         tileMode: false,
         cellColorMode: 'solid',
         gradientBlendFactor: preset.gradientBlendFactor ?? 1,
+        waveDistortion: preset.waveDistortion,
         generator: 'grid',
         brickSettings: undefined,
     };

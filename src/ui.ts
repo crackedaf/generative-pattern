@@ -11,6 +11,8 @@ import type {
     Palette,
     PatternSettings,
     Preset,
+    WaveDistortionSettings,
+    WaveLayer,
 } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_BRUSH, MAX_COLORS, MAX_BRUSH_SIZE, MIN_BRUSH_SIZE, MAX_CANVAS_PIXELS } from './types';
 import { PRESETS } from './presets';
@@ -24,9 +26,46 @@ const STORAGE_SETTINGS = 'generative-pattern-settings';
 /** Debounce timer */
 let debounceTimer: number | null = null;
 const DEFAULT_TEXTURE_PRESET_NAME = PRESETS.find(p => p.generator !== 'brick')?.name ?? PRESETS[0]?.name ?? '';
+const MAX_WAVE_LAYERS = 10;
+let debouncedSettingsEmitter: ((settings: PatternSettings) => void) | null = null;
+const DEFAULT_WAVE_LAYER: WaveLayer = {
+    amplitude: 20,
+    frequency: 0.02,
+    phase: 0,
+    influence: 1,
+};
 
 function clampGradientBlendFactor(value: number): number {
     return Math.max(0, Math.min(1, value));
+}
+
+function clampWaveInfluence(value: number): number {
+    return Math.max(0, Math.min(1, value));
+}
+
+function normalizeWaveLayer(layer?: Partial<WaveLayer>): WaveLayer {
+    return {
+        amplitude: Number.isFinite(layer?.amplitude) ? Number(layer!.amplitude) : DEFAULT_WAVE_LAYER.amplitude,
+        frequency: Number.isFinite(layer?.frequency) ? Number(layer!.frequency) : DEFAULT_WAVE_LAYER.frequency,
+        phase: Number.isFinite(layer?.phase) ? Number(layer!.phase) : DEFAULT_WAVE_LAYER.phase,
+        influence: clampWaveInfluence(
+            Number.isFinite(layer?.influence) ? Number(layer!.influence) : DEFAULT_WAVE_LAYER.influence
+        ),
+    };
+}
+
+function normalizeWaveDistortionSettings(settings?: WaveDistortionSettings): WaveDistortionSettings {
+    return {
+        enabled: settings?.enabled === true,
+        waves: Array.isArray(settings?.waves)
+            ? settings!.waves.slice(0, MAX_WAVE_LAYERS).map(wave => normalizeWaveLayer(wave))
+            : [],
+    };
+}
+
+function emitDebouncedSettingsChange(): void {
+    if (!uiState || !debouncedSettingsEmitter) return;
+    debouncedSettingsEmitter(uiState.settings);
 }
 
 function withBrickTextureDefaults(brickSettings: BrickSettings): BrickSettings {
@@ -335,6 +374,176 @@ function syncGradientFactorControl(mode: PatternSettings['cellColorMode']): void
     }
 }
 
+function getCurrentWaveSettings(): WaveDistortionSettings {
+    return normalizeWaveDistortionSettings(uiState?.settings.waveDistortion);
+}
+
+function updateWaveSettings(next: WaveDistortionSettings): void {
+    if (!uiState) return;
+    uiState.settings = {
+        ...uiState.settings,
+        waveDistortion: normalizeWaveDistortionSettings(next),
+    };
+    renderWaveLayers();
+    emitDebouncedSettingsChange();
+}
+
+function updateWaveLayer(index: number, patch: Partial<WaveLayer>): void {
+    const current = getCurrentWaveSettings();
+    if (index < 0 || index >= current.waves.length) return;
+    const waves = [...current.waves];
+    waves[index] = normalizeWaveLayer({ ...waves[index], ...patch });
+    updateWaveSettings({ ...current, waves });
+}
+
+function removeWaveLayer(index: number): void {
+    const current = getCurrentWaveSettings();
+    if (index < 0 || index >= current.waves.length) return;
+    const waves = current.waves.filter((_, waveIndex) => waveIndex !== index);
+    updateWaveSettings({ ...current, waves });
+}
+
+function renderWaveControlRow(options: {
+    parent: HTMLElement;
+    id: string;
+    label: string;
+    min: number;
+    max: number;
+    step: number;
+    value: number;
+    valueFormatter: (value: number) => string;
+    onInput: (value: number) => void;
+    disabled: boolean;
+}): void {
+    const row = document.createElement('div');
+    row.className = 'wave-row';
+
+    const label = document.createElement('label');
+    label.setAttribute('for', options.id);
+    label.textContent = options.label;
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.id = options.id;
+    slider.min = String(options.min);
+    slider.max = String(options.max);
+    slider.step = String(options.step);
+    slider.value = String(options.value);
+    slider.disabled = options.disabled;
+
+    const value = document.createElement('span');
+    value.className = 'slider-value';
+    value.textContent = options.valueFormatter(options.value);
+
+    slider.addEventListener('input', () => {
+        const nextValue = parseFloat(slider.value);
+        value.textContent = options.valueFormatter(nextValue);
+        options.onInput(nextValue);
+    });
+
+    row.appendChild(label);
+    row.appendChild(slider);
+    row.appendChild(value);
+    options.parent.appendChild(row);
+}
+
+function renderWaveLayers(): void {
+    if (!uiState) return;
+
+    const container = document.getElementById('wave-layers') as HTMLDivElement | null;
+    const enableInput = document.getElementById('wave-distortion-enabled') as HTMLInputElement | null;
+    const addButton = document.getElementById('add-wave') as HTMLButtonElement | null;
+    if (!container || !enableInput || !addButton) return;
+
+    const waveSettings = getCurrentWaveSettings();
+    const controlsEnabled = waveSettings.enabled;
+
+    enableInput.checked = controlsEnabled;
+    addButton.disabled = !controlsEnabled || waveSettings.waves.length >= MAX_WAVE_LAYERS;
+    container.innerHTML = '';
+    container.style.opacity = controlsEnabled ? '1' : '0.6';
+
+    waveSettings.waves.forEach((wave, index) => {
+        const waveLayer = document.createElement('div');
+        waveLayer.className = 'wave-layer';
+
+        const header = document.createElement('div');
+        header.className = 'wave-layer-header';
+
+        const title = document.createElement('span');
+        title.className = 'wave-layer-title';
+        title.textContent = `Wave ${index + 1}`;
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'wave-remove';
+        removeButton.textContent = '×';
+        removeButton.disabled = !controlsEnabled;
+        removeButton.setAttribute('aria-label', `Remove wave ${index + 1}`);
+        removeButton.addEventListener('click', () => {
+            removeWaveLayer(index);
+        });
+
+        header.appendChild(title);
+        header.appendChild(removeButton);
+        waveLayer.appendChild(header);
+
+        renderWaveControlRow({
+            parent: waveLayer,
+            id: `wave-${index}-amplitude`,
+            label: 'Amplitude',
+            min: 0,
+            max: 100,
+            step: 1,
+            value: wave.amplitude,
+            valueFormatter: value => value.toFixed(0),
+            onInput: value => updateWaveLayer(index, { amplitude: value }),
+            disabled: !controlsEnabled,
+        });
+
+        renderWaveControlRow({
+            parent: waveLayer,
+            id: `wave-${index}-frequency`,
+            label: 'Frequency',
+            min: 0,
+            max: 0.2,
+            step: 0.001,
+            value: wave.frequency,
+            valueFormatter: value => value.toFixed(3),
+            onInput: value => updateWaveLayer(index, { frequency: value }),
+            disabled: !controlsEnabled,
+        });
+
+        renderWaveControlRow({
+            parent: waveLayer,
+            id: `wave-${index}-phase`,
+            label: 'Phase',
+            min: -6.28,
+            max: 6.28,
+            step: 0.01,
+            value: wave.phase,
+            valueFormatter: value => value.toFixed(2),
+            onInput: value => updateWaveLayer(index, { phase: value }),
+            disabled: !controlsEnabled,
+        });
+
+        renderWaveControlRow({
+            parent: waveLayer,
+            id: `wave-${index}-influence`,
+            label: 'Influence',
+            min: 0,
+            max: 1,
+            step: 0.01,
+            value: wave.influence,
+            valueFormatter: value => value.toFixed(2),
+            onInput: value => updateWaveLayer(index, { influence: clampWaveInfluence(value) }),
+            disabled: !controlsEnabled,
+        });
+
+        container.appendChild(waveLayer);
+    });
+}
+
 /**
  * Loads a preset
  */
@@ -357,6 +566,9 @@ function loadPreset(preset: Preset): void {
             gradientBlendFactor: clampGradientBlendFactor(
                 preset.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor
             ),
+            waveDistortion: normalizeWaveDistortionSettings(
+                preset.waveDistortion ?? DEFAULT_SETTINGS.waveDistortion
+            ),
             generator: 'brick',
             brickSettings: withBrickTextureDefaults({ ...preset.brickSettings }),
         };
@@ -372,6 +584,9 @@ function loadPreset(preset: Preset): void {
             randomness: preset.randomness,
             gradientBlendFactor: clampGradientBlendFactor(
                 preset.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor
+            ),
+            waveDistortion: normalizeWaveDistortionSettings(
+                preset.waveDistortion ?? DEFAULT_SETTINGS.waveDistortion
             ),
             generator: 'grid',
             brickSettings: undefined,
@@ -421,6 +636,10 @@ function syncUIToSettings(): void {
     getElement<HTMLInputElement>('gradient-factor').value = gradientFactor.toFixed(2);
     getElement<HTMLSpanElement>('gradient-factor-value').textContent = gradientFactor.toFixed(2);
     syncGradientFactorControl(settings.cellColorMode);
+
+    const waveDistortion = normalizeWaveDistortionSettings(settings.waveDistortion);
+    getElement<HTMLInputElement>('wave-distortion-enabled').checked = waveDistortion.enabled;
+    renderWaveLayers();
 
     // Brush
     getElement<HTMLInputElement>('brush-size').value = String(brush.size);
@@ -574,6 +793,7 @@ export function initUI(callbacks: {
         gradientBlendFactor: clampGradientBlendFactor(
             Number(initialSettings.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor)
         ),
+        waveDistortion: normalizeWaveDistortionSettings(initialSettings.waveDistortion),
     };
 
     uiState = {
@@ -588,6 +808,7 @@ export function initUI(callbacks: {
         localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings));
         callbacks.onSettingsChange(settings);
     }, 100);
+    debouncedSettingsEmitter = debouncedSettingsChange;
 
     // Canvas size inputs
     const widthInput = getElement<HTMLInputElement>('width');
@@ -648,6 +869,31 @@ export function initUI(callbacks: {
         getElement<HTMLSpanElement>('gradient-factor-value').textContent = gradientBlendFactor.toFixed(2);
         uiState!.settings = { ...uiState!.settings, gradientBlendFactor };
         debouncedSettingsChange(uiState!.settings);
+    });
+
+    // Wave distortion controls
+    const waveEnabledInput = getElement<HTMLInputElement>('wave-distortion-enabled');
+    waveEnabledInput.addEventListener('change', () => {
+        const current = getCurrentWaveSettings();
+        updateWaveSettings({
+            ...current,
+            enabled: waveEnabledInput.checked,
+        });
+    });
+
+    const addWaveButton = getElement<HTMLButtonElement>('add-wave');
+    addWaveButton.addEventListener('click', () => {
+        const current = getCurrentWaveSettings();
+        if (current.waves.length >= MAX_WAVE_LAYERS) {
+            return;
+        }
+
+        const waves = [...current.waves, { ...DEFAULT_WAVE_LAYER }];
+        updateWaveSettings({
+            ...current,
+            enabled: true,
+            waves,
+        });
     });
 
     // Seed input

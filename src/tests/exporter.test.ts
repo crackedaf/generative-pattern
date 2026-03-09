@@ -77,6 +77,8 @@ describe('generateSVGString', () => {
         expect(svg).toContain('data-cell-size="50"');
         expect(svg).toContain('data-direction="top-bottom"');
         expect(svg).toContain('data-gradient-blend-factor="1"');
+        expect(svg).toContain('data-wave-distortion-enabled="false"');
+        expect(svg).toContain('data-wave-count="0"');
         expect(svg).toContain('data-generator-app="generative-pattern"');
     });
 
@@ -120,5 +122,21 @@ describe('generateSVGString', () => {
         const svg = generateSVGString(testSettings, overrides);
 
         expect(svg).toContain('#00ff00');
+    });
+
+    it('should apply wave distortion to rect y positions when enabled', () => {
+        const settings = {
+            ...testSettings,
+            waveDistortion: {
+                enabled: true,
+                waves: [{ amplitude: 10, frequency: 0.1, phase: 0, influence: 1 }],
+            },
+        };
+        const svg = generateSVGString(settings, new Map());
+        expect(svg).toContain('data-wave-distortion-enabled="true"');
+
+        const yMatches = [...svg.matchAll(/ y="(-?\d+)"/g)];
+        const hasDistortedY = yMatches.some(match => match[1] !== '0' && match[1] !== '50');
+        expect(hasDistortedY).toBe(true);
     });
 });

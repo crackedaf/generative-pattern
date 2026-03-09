@@ -97,6 +97,18 @@ export type GradientDirection =
 /** Per-cell color rendering mode */
 export type CellColorMode = 'solid' | 'gradient';
 
+export interface WaveLayer {
+  amplitude: number;
+  frequency: number;
+  phase: number;
+  influence: number; // 0-1 strength
+}
+
+export interface WaveDistortionSettings {
+  enabled: boolean;
+  waves: WaveLayer[];
+}
+
 /** Manual cell override for pixel editing */
 export interface CellOverride {
   row: number;
@@ -130,6 +142,7 @@ export interface PatternSettings {
   cellColorMode: CellColorMode;
   /** 0-1 blend strength for gradient cell mode (0 = base, 1 = full blend) */
   gradientBlendFactor: number;
+  waveDistortion?: WaveDistortionSettings;
   /** Active generator strategy — defaults to 'grid' */
   generator?: GeneratorType;
   /** Required when generator === 'brick' */
@@ -153,6 +166,7 @@ export interface Preset {
   randomness: number;
   /** Optional 0-1 gradient blend strength */
   gradientBlendFactor?: number;
+  waveDistortion?: WaveDistortionSettings;
   /** Set to 'brick' for brick presets */
   generator?: GeneratorType;
   /** Required when generator === 'brick' */
@@ -191,6 +205,10 @@ export const DEFAULT_SETTINGS: PatternSettings = {
   tileMode: false,
   cellColorMode: 'solid',
   gradientBlendFactor: 1,
+  waveDistortion: {
+    enabled: false,
+    waves: [],
+  },
 };
 
 /** Default brush settings */

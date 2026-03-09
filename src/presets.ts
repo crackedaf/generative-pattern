@@ -33,6 +33,21 @@ export const PRESETS: Preset[] = [
         randomness: 0.15,
     },
     {
+        name: 'Terrain Waves',
+        colors: ['#2f4858', '#33658a', '#86bbd8', '#f6ae2d', '#f26419'],
+        seed: 3024,
+        cellSize: 16,
+        direction: 'top-bottom',
+        randomness: 0.12,
+        waveDistortion: {
+            enabled: true,
+            waves: [
+                { amplitude: 30, frequency: 0.02, phase: 0, influence: 1 },
+                { amplitude: 15, frequency: 0.04, phase: 1.5, influence: 0.6 },
+            ],
+        },
+    },
+    {
         name: 'Monochrome Noise',
         colors: ['#1a1a2e', '#16213e', '#0f3460', '#e94560'],
         seed: 8080,

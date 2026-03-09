@@ -419,6 +419,66 @@ button.danger:hover:not(:disabled) {
   color: white;
 }
 
+.wave-layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.wave-layer {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+}
+
+.wave-layer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.wave-layer-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.wave-remove {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.wave-remove:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.wave-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.wave-row:last-child {
+  margin-bottom: 0;
+}
+
+.wave-row label {
+  width: 76px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 /* Warning text */
 .warning {
   display: none;

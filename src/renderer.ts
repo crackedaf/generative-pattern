@@ -2,10 +2,11 @@
  * Canvas renderer for pattern generation
  */
 
-import type { PatternSettings, Preset } from './types';
+import type { PatternSettings, Preset, WaveLayer } from './types';
 import { createGradientSampler, hexToRgb, lerpColor, rgbToHex, safeColor } from './gradient';
 import { mulberry32 } from './rng';
 import { computeSnappedGrid, normalizeCellSize } from './gridUtils';
+import { computeWaveOffset } from './waveDistortion';
 import {
     generateBricks,
     renderBricksToCanvas,
@@ -14,6 +15,7 @@ import {
 
 const brickTextureCanvasCache = new Map<string, HTMLCanvasElement>();
 const brickTextureCanvasProvider = createBrickTextureCanvasProvider();
+const EMPTY_WAVES: WaveLayer[] = [];
 
 /** Grid cell data for rendering */
 interface CellData {
@@ -195,6 +197,9 @@ export function generateCellData(
         settings.direction
     );
     const rng = mulberry32(settings.seed);
+    const waveDistortion = settings.waveDistortion;
+    const waves = waveDistortion?.waves ?? EMPTY_WAVES;
+    const isWaveDistortionEnabled = waveDistortion?.enabled === true && waves.length > 0;
 
     // First pass: generate base colors
     const cellColors = new Map<string, string>();
@@ -259,11 +264,19 @@ export function generateCellData(
                 );
             }
 
+            const baseX = offsetX + col * cellSize;
+            const baseY = offsetY + row * cellSize;
+            let distortedY = baseY;
+            if (isWaveDistortionEnabled) {
+                const centerX = baseX + cellSize / 2;
+                distortedY += computeWaveOffset(centerX, waves);
+            }
+
             cells.push({
                 row,
                 col,
-                x: offsetX + col * cellSize,
-                y: offsetY + row * cellSize,
+                x: baseX,
+                y: distortedY,
                 width: cellSize,
                 height: cellSize,
                 color,
@@ -339,6 +352,7 @@ function createBrickTextureCanvasProvider(): BrickTextureCanvasProvider {
             tileMode: false,
             cellColorMode: 'solid',
             gradientBlendFactor: 1,
+            waveDistortion: preset.waveDistortion,
             generator: 'grid',
             brickSettings: undefined,
         };
