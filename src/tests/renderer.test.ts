@@ -70,20 +70,31 @@ describe('generateCellData waveDistortion', () => {
         expect(getCell(cells, 1, 2).y).toBe(2);
     });
 
-    it('distorts y using center x sampling when enabled', () => {
-        const settings = {
+    it('keeps grid geometry and applies wave to sampled gradient values', () => {
+        const baseSettings = {
             ...DEFAULT_SETTINGS,
             width: 8,
             height: 8,
             cellSize: 2,
+            colors: ['#000000', '#ffffff'],
+            direction: 'top-bottom' as const,
+            randomness: 0,
+            symmetry: { horizontal: false, vertical: false },
             waveDistortion: {
-                enabled: true,
-                waves: [{ amplitude: 10, frequency: 0.2, phase: 0, influence: 1 }],
+                enabled: false,
+                waves: [{ amplitude: 2, frequency: 1, phase: 0, influence: 1 }],
             },
         };
-        const cells = generateCellData(settings, new Map<string, string>());
-        const cell = getCell(cells, 1, 2);
-        const expectedOffset = 10 * Math.sin(0.2 * (cell.x + cell.width / 2));
-        expect(cell.y).toBeCloseTo(2 + expectedOffset, 8);
+        const cellsWithoutWave = generateCellData(baseSettings, new Map<string, string>());
+        const settings = {
+            ...baseSettings,
+            waveDistortion: { ...baseSettings.waveDistortion, enabled: true },
+        };
+        const cellsWithWave = generateCellData(settings, new Map<string, string>());
+        const withoutWave = getCell(cellsWithoutWave, 1, 2);
+        const withWave = getCell(cellsWithWave, 1, 2);
+
+        expect(withWave.y).toBe(withoutWave.y);
+        expect(withWave.color).not.toBe(withoutWave.color);
     });
 });

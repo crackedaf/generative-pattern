@@ -39,6 +39,25 @@ export function getGridDimensions(settings: PatternSettings): { rows: number; co
     };
 }
 
+interface WaveGradientContext {
+    enabled: boolean;
+    waves: WaveLayer[];
+    offsetX: number;
+    offsetY: number;
+    cellSize: number;
+    gridWidth: number;
+    gridHeight: number;
+}
+
+function clamp01(value: number): number {
+    return Math.max(0, Math.min(1, value));
+}
+
+function wrap01(value: number): number {
+    const wrapped = value % 1;
+    return wrapped < 0 ? wrapped + 1 : wrapped;
+}
+
 /**
  * Generates a key for cell override map
  */
@@ -92,6 +111,7 @@ function getCellColor(
     cols: number,
     settings: PatternSettings,
     sampler: (x: number, y: number) => string,
+    waveGradientContext: WaveGradientContext,
     rng: () => number
 ): string {
     // Calculate normalized position (cell center)
@@ -105,8 +125,23 @@ function getCellColor(
     if (settings.randomness > 0) {
         const offsetX = (rng() - 0.5) * 2 * settings.randomness;
         const offsetY = (rng() - 0.5) * 2 * settings.randomness;
-        perturbedX = Math.max(0, Math.min(1, x + offsetX));
-        perturbedY = Math.max(0, Math.min(1, y + offsetY));
+        perturbedX = clamp01(x + offsetX);
+        perturbedY = clamp01(y + offsetY);
+    }
+
+    if (waveGradientContext.enabled) {
+        const centerX = waveGradientContext.offsetX + col * waveGradientContext.cellSize + waveGradientContext.cellSize / 2;
+        const centerY = waveGradientContext.offsetY + row * waveGradientContext.cellSize + waveGradientContext.cellSize / 2;
+        const isHorizontalGradient =
+            settings.direction === 'left-right' || settings.direction === 'right-left';
+
+        if (isHorizontalGradient) {
+            const waveOffset = computeWaveOffset(centerY, waveGradientContext.waves);
+            perturbedX = wrap01(perturbedX + waveOffset / waveGradientContext.gridWidth);
+        } else {
+            const waveOffset = computeWaveOffset(centerX, waveGradientContext.waves);
+            perturbedY = wrap01(perturbedY + waveOffset / waveGradientContext.gridHeight);
+        }
     }
 
     return sampler(perturbedX, perturbedY);
@@ -199,7 +234,15 @@ export function generateCellData(
     const rng = mulberry32(settings.seed);
     const waveDistortion = settings.waveDistortion;
     const waves = waveDistortion?.waves ?? EMPTY_WAVES;
-    const isWaveDistortionEnabled = waveDistortion?.enabled === true && waves.length > 0;
+    const waveGradientContext: WaveGradientContext = {
+        enabled: waveDistortion?.enabled === true && waves.length > 0,
+        waves,
+        offsetX,
+        offsetY,
+        cellSize,
+        gridWidth: Math.max(cellSize, cols * cellSize),
+        gridHeight: Math.max(cellSize, rows * cellSize),
+    };
 
     // First pass: generate base colors
     const cellColors = new Map<string, string>();
@@ -220,7 +263,7 @@ export function generateCellData(
             }
 
             // Generate color
-            const color = getCellColor(row, col, rows, cols, settings, sampler, rng);
+            const color = getCellColor(row, col, rows, cols, settings, sampler, waveGradientContext, rng);
 
             // Apply symmetry
             if (settings.symmetry.horizontal || settings.symmetry.vertical) {
@@ -266,17 +309,12 @@ export function generateCellData(
 
             const baseX = offsetX + col * cellSize;
             const baseY = offsetY + row * cellSize;
-            let distortedY = baseY;
-            if (isWaveDistortionEnabled) {
-                const centerX = baseX + cellSize / 2;
-                distortedY += computeWaveOffset(centerX, waves);
-            }
 
             cells.push({
                 row,
                 col,
                 x: baseX,
-                y: distortedY,
+                y: baseY,
                 width: cellSize,
                 height: cellSize,
                 color,
@@ -405,7 +443,8 @@ export function getColorAtCell(
     settings: PatternSettings,
     overrides: Map<string, string>
 ): string {
-    const { rows, cols } = getGridDimensions(settings);
+    const snappedGrid = computeSnappedGrid(settings.width, settings.height, settings.cellSize);
+    const { rows, cols, offsetX, offsetY } = snappedGrid;
     if (row < 0 || row >= rows || col < 0 || col >= cols) {
         return '#000000';
     }
@@ -423,6 +462,18 @@ export function getColorAtCell(
         settings.direction
     );
     const rng = mulberry32(settings.seed);
+    const cellSize = normalizeCellSize(settings.cellSize);
+    const waveDistortion = settings.waveDistortion;
+    const waves = waveDistortion?.waves ?? EMPTY_WAVES;
+    const waveGradientContext: WaveGradientContext = {
+        enabled: waveDistortion?.enabled === true && waves.length > 0,
+        waves,
+        offsetX,
+        offsetY,
+        cellSize,
+        gridWidth: Math.max(cellSize, cols * cellSize),
+        gridHeight: Math.max(cellSize, rows * cellSize),
+    };
 
     // Fast-forward RNG to this cell
     const cellIndex = row * cols + col;
@@ -430,5 +481,5 @@ export function getColorAtCell(
         rng();
     }
 
-    return getCellColor(row, col, rows, cols, settings, sampler, rng);
+    return getCellColor(row, col, rows, cols, settings, sampler, waveGradientContext, rng);
 }

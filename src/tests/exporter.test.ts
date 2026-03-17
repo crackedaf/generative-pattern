@@ -124,7 +124,7 @@ describe('generateSVGString', () => {
         expect(svg).toContain('#00ff00');
     });
 
-    it('should apply wave distortion to rect y positions when enabled', () => {
+    it('should keep rect geometry aligned to grid when wave distortion is enabled', () => {
         const settings = {
             ...testSettings,
             waveDistortion: {
@@ -136,7 +136,7 @@ describe('generateSVGString', () => {
         expect(svg).toContain('data-wave-distortion-enabled="true"');
 
         const yMatches = [...svg.matchAll(/ y="(-?\d+)"/g)];
-        const hasDistortedY = yMatches.some(match => match[1] !== '0' && match[1] !== '50');
-        expect(hasDistortedY).toBe(true);
+        const hasOnlyGridY = yMatches.every(match => match[1] === '0' || match[1] === '50');
+        expect(hasOnlyGridY).toBe(true);
     });
 });
