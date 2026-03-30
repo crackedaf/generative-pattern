@@ -1,112 +1,100 @@
 # Generative Pattern
 
-A local, offline-capable web application for generating abstract geometric patterns with customizable gradients, pixel editing, and export capabilities.
+Generative Pattern is a local-first TypeScript + Vite app for creating deterministic abstract art in the browser. It supports both classic grid generation and a brick-pattern renderer with texture layering, then exports to PNG or SVG.
 
-![Generative Pattern](https://placehold.co/800x400/1a1a24/6366f1?text=Generative+Pattern)
+## Latest Changes Included
+
+- Added a full **brick generator mode** with dedicated controls (brick size, mortar, variation, cracks, moss, and SVG optimization).
+- Added **brick texture modes**: `solid`, `singlePreset`, and `randomPreset`, including per-brick randomization, texture scale, and texture rotation.
+- Added **wave distortion** with up to 10 layers, each with amplitude, frequency, phase, and influence.
+- Added **gradient blend factor** control for smoother interpolation in gradient cell mode.
+- Added **preset mode toggle** (grid presets vs brick presets) and expanded built-in preset collection.
+- Fixed **cell-size snapping / centered grid rendering** for cleaner alignment.
+- Updated shortcuts: SVG export is now `Ctrl/Cmd + X`.
+- Made rendering/export behavior align with the current transparent-background workflow.
 
 ## Features
 
-- **Canvas Controls**: Width, height (up to 1,048,576 total pixels), and cell size
-- **20-Color Palette**: Add up to 20 colors with drag-and-drop reordering
-- **Gradient Engine**: Multi-stop linear gradient with 4 direction options and adjustable blend factor
-- **Pixel Editor**: Manual cell editing with brush size control (1–32 cells)
-- **Color Replace**: Find and replace colors across the entire canvas
-- **Symmetry**: Horizontal and vertical mirroring
-- **Deterministic Seeds**: Same seed + settings = identical output
-- **Export**: PNG (with DPI scaling) and SVG (vector)
+- Two generators: **Grid** and **Brick**.
+- Palette workflow: up to **20 colors**, drag-and-drop reorder, save/load palettes from `localStorage`.
+- Gradient controls: direction, seeded randomness, solid vs gradient color mode, and blend factor.
+- Wave distortion system: layer multiple waves without breaking deterministic output.
+- Symmetry controls: horizontal and vertical mirroring.
+- Pixel editor: paint overrides, brush size `1-32`, eyedropper with `Shift + Click`, clear all edits.
+- Color replace utility: find/replace across generated cells.
+- Deterministic generation: same settings + seed always reproduce the same result.
+- Export: PNG and SVG with stable, parseable filenames and SVG metadata.
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
+```
 
-# Build for production
+Build and test:
+
+```bash
 npm run build
-
-# Run tests
 npm run test
 ```
 
 ## Keyboard Shortcuts
 
 | Key | Action |
-|-----|--------|
-| `Ctrl+S` | Export PNG |
-| `Ctrl+Shift+S` | Export SVG |
-| `R` | Regenerate with new seed |
+| --- | --- |
+| `Ctrl/Cmd + S` | Export PNG |
+| `Ctrl/Cmd + X` | Export SVG |
+| `R` | Regenerate with a new seed |
 | `E` | Toggle edit mode |
-| `Shift+Click` | Eyedropper (pick color) |
+| `Shift + Click` | Eyedropper color pick |
 
-## Example Presets
+## Presets
 
-### Neon Grid
-- **Colors**: `#0ff`, `#f0f`, `#ff0`
-- **Seed**: 1337
-- **Cell Size**: 24
-- **Direction**: Left → Right
+- Built-in presets include both **grid** and **brick** categories.
+- Notable entries: `Terrain Waves`, `Classic Brick`, `Mossy Ruins`, and `Preset Texture Brick Demo`.
+- Presets carry full config (palette, seed, randomness, direction, and optional wave/brick settings).
 
-### Dusky Blocks
-- **Colors**: `#0b1021`, `#3b2f5b`, `#b26b6b`
-- **Seed**: 420
-- **Cell Size**: 32
-- **Direction**: Top → Bottom
+## Export Notes
 
-### Sunset Gradient
-- **Colors**: `#ff6b35`, `#ff9f1c`, `#ffbf69`, `#cbf3f0`, `#2ec4b6`
-- **Seed**: 2024
-- **Cell Size**: 16
-- **Direction**: Top → Bottom
+- PNG export uses `devicePixelRatio` for high-DPI output in grid mode.
+- SVG export is pure vector and includes metadata attributes (seed, generator, cell size, direction, randomness, blend factor, wave info, colors).
+- Brick SVG export supports mortar/background, grouped solid fills, textured clipping paths, moss patches, and cracks.
 
 ## Project Structure
 
-```
+```text
 generative-pattern/
-├── index.html          # Main HTML
-├── src/
-│   ├── main.ts         # Entry point
-│   ├── ui.ts           # UI controller
-│   ├── renderer.ts     # Canvas rendering
-│   ├── gradient.ts     # Color interpolation
-│   ├── pixelEditor.ts  # Manual editing
-│   ├── colorReplacer.ts # Find/replace colors
-│   ├── exporter.ts     # PNG/SVG export
-│   ├── rng.ts          # Seeded PRNG
-│   ├── types.ts        # TypeScript types
-│   ├── presets.ts      # Built-in presets
-│   ├── style.css       # Styles
-│   └── tests/          # Unit tests
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-├── LICENSE
-└── README.md
+|- index.html
+|- src/
+|  |- main.ts
+|  |- ui.ts
+|  |- renderer.ts
+|  |- brickGenerator.ts
+|  |- waveDistortion.ts
+|  |- gridUtils.ts
+|  |- gradient.ts
+|  |- pixelEditor.ts
+|  |- colorReplacer.ts
+|  |- exporter.ts
+|  |- rng.ts
+|  |- presets.ts
+|  |- types.ts
+|  |- style.css
+|  `- tests/
+|- package.json
+|- tsconfig.json
+|- vite.config.ts
+`- README.md
 ```
-
-## Export Details
-
-### PNG Export
-- Honors `devicePixelRatio` for crisp images on retina displays
-- Filename format: `pattern-YYYYMMDD-HHMM-seed123-3colors.png`
-
-### SVG Export
-- True vector output with `<rect>` elements
-- Includes metadata: seed, cell size, direction, colors
-- Rects grouped by color to minimize file size
-- Integer coordinates for crisp rendering
 
 ## Technical Notes
 
-- **Max Canvas**: 1,048,576 pixels (e.g., 1024×1024)
-- **Cell Color Modes**: 
-  - **Solid**: Each cell is a single sampled color
-  - **Gradient**: Cells blend with neighbors, controlled by blend factor (0-1)
-- **PRNG**: Uses mulberry32 algorithm for deterministic randomness
-- **No external dependencies** at runtime
+- Max canvas safety cap: `1,048,576` total pixels.
+- Runtime is browser-only, but tests run in Node via Vitest.
+- Strict TypeScript is enabled (`noUnusedLocals`, `noUnusedParameters`).
+- Core randomness uses `mulberry32` for reproducibility.
 
 ## License
 
-MIT License - See [LICENSE](./LICENSE) for details.
+MIT. See `LICENSE`.
