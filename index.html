@@ -13,12 +13,41 @@
 
 <body>
   <div id="app">
-    <!-- Control Panel -->
-    <aside class="control-panel" role="complementary" aria-label="Pattern controls">
+    <!-- Presets Panel -->
+    <aside class="preset-panel" role="complementary" aria-label="Preset controls">
       <!-- Header -->
       <header class="panel-header">
         <h1>Generative Pattern</h1>
       </header>
+
+      <section class="section">
+        <h2 class="section-title">Presets</h2>
+        <div class="control-row" style="margin-top: 8px;">
+          <label for="preset-mode-toggle">Preset Mode</label>
+          <button
+            type="button"
+            id="preset-mode-toggle"
+            class="secondary mode-toggle-button"
+            aria-label="Toggle preset mode"
+            aria-pressed="false"
+            data-mode="grid">Grid Presets</button>
+        </div>
+        <div class="control-row" style="margin-top: 8px;">
+          <label for="presets">Presets</label>
+          <select id="presets" aria-label="Load preset palette">
+            <option value="">Select preset...</option>
+          </select>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Canvas Area -->
+    <main id="canvas-container" role="main" aria-label="Pattern preview">
+      <canvas id="canvas" width="512" height="512"></canvas>
+    </main>
+
+    <!-- Settings Panel -->
+    <aside class="control-panel settings-panel" role="complementary" aria-label="Pattern controls">
 
       <!-- Canvas Size -->
       <section class="section">
@@ -214,22 +243,6 @@
         <h2 class="section-title">Colors (up to 20)</h2>
         <div id="color-list" class="color-list" role="list" aria-label="Color palette"></div>
         <button type="button" id="add-color" class="secondary">+ Add Color</button>
-        <div class="control-row" style="margin-top: 8px;">
-          <label for="preset-mode-toggle">Preset Mode</label>
-          <button
-            type="button"
-            id="preset-mode-toggle"
-            class="secondary mode-toggle-button"
-            aria-label="Toggle preset mode"
-            aria-pressed="false"
-            data-mode="grid">Grid Presets</button>
-        </div>
-        <div class="control-row" style="margin-top: 8px;">
-          <label for="presets">Presets</label>
-          <select id="presets" aria-label="Load preset palette">
-            <option value="">Select preset...</option>
-          </select>
-        </div>
         <div class="control-row">
           <label for="saved-palettes">Saved</label>
           <select id="saved-palettes" aria-label="Load saved palette">
@@ -297,10 +310,6 @@
       </section>
     </aside>
 
-    <!-- Canvas Area -->
-    <main id="canvas-container" role="main" aria-label="Pattern preview">
-      <canvas id="canvas" width="512" height="512"></canvas>
-    </main>
   </div>
 
   <script type="module" src="/src/main.ts"></script>

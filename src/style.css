@@ -71,14 +71,11 @@ body {
   width: 100vw;
 }
 
-/* Control Panel */
+/* Side panels */
+.preset-panel,
 .control-panel {
-  width: 320px;
-  min-width: 280px;
-  max-width: 400px;
   height: 100vh;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--spacing-md);
@@ -87,14 +84,34 @@ body {
   gap: var(--spacing-md);
 }
 
+.preset-panel {
+  width: 280px;
+  min-width: 220px;
+  max-width: 320px;
+  border-right: 1px solid var(--border);
+}
+
+.control-panel {
+  width: 320px;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.settings-panel {
+  border-left: 1px solid var(--border);
+}
+
+.preset-panel::-webkit-scrollbar,
 .control-panel::-webkit-scrollbar {
   width: 6px;
 }
 
+.preset-panel::-webkit-scrollbar-track,
 .control-panel::-webkit-scrollbar-track {
   background: var(--bg-tertiary);
 }
 
+.preset-panel::-webkit-scrollbar-thumb,
 .control-panel::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 3px;
@@ -110,7 +127,8 @@ body {
   margin-bottom: var(--spacing-sm);
 }
 
-.panel-header h1 {
+.panel-header h1,
+.panel-header h2 {
   font-size: 16px;
   font-weight: 600;
   background: linear-gradient(135deg, var(--accent), #a855f7);
@@ -507,6 +525,7 @@ button.danger:hover:not(:disabled) {
 /* Canvas container */
 #canvas-container {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -561,16 +580,24 @@ button.danger:hover:not(:disabled) {
     flex-direction: column;
   }
 
+  .preset-panel,
   .control-panel {
     width: 100%;
     max-width: none;
     height: auto;
-    max-height: 40vh;
+    max-height: 24vh;
     border-right: none;
+    border-left: none;
     border-bottom: 1px solid var(--border);
   }
 
+  .settings-panel {
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+  }
+
   #canvas-container {
+    min-height: 0;
     padding: var(--spacing-md);
   }
 }
