@@ -5,16 +5,16 @@
 
 :root {
   /* Colors */
-  --bg-primary: #0f0f14;
-  --bg-secondary: #1a1a24;
-  --bg-tertiary: #252532;
-  --bg-hover: #2a2a3a;
-  --text-primary: #f0f0f5;
-  --text-secondary: #a0a0b0;
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --bg-tertiary: #000000;
+  --bg-hover: #101011;
+  --text-primary: #ffffff;
+  --text-secondary: #d0d0e2;
   --text-muted: #606070;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-muted: #4f46e5;
+  --accent: #ffffff;
+  --accent-hover: #000000;
+  --accent-muted: #000000;
   --danger: #ef4444;
   --success: #22c55e;
   --warning: #f59e0b;
@@ -131,7 +131,7 @@ body {
 .panel-header h2 {
   font-size: 16px;
   font-weight: 600;
-  background: linear-gradient(135deg, var(--accent), #a855f7);
+  background: linear-gradient(135deg, var(--accent), #fdcf00);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -245,7 +245,7 @@ input[type="range"]:focus {
   outline: none;
 }
 
-.slider-value {
+.slider-value
   min-width: 40px;
   text-align: right;
   font-size: 12px;
@@ -347,6 +347,22 @@ button.danger:hover:not(:disabled) {
 
 .button-row button {
   flex: 1;
+}
+
+#regenerate,
+#export-png,
+#export-svg {
+  background: #000000;
+  border: 1px solid var(--border);
+  color: #ffffff;
+}
+
+#regenerate:hover:not(:disabled),
+#export-png:hover:not(:disabled),
+#export-svg:hover:not(:disabled) {
+  background: #60ff60;
+  border-color: #90ee90;
+  color: #000000;
 }
 
 .mode-toggle-button {
@@ -477,7 +493,7 @@ button.danger:hover:not(:disabled) {
 .wave-remove:hover:not(:disabled) {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: #221d1d;
 }
 
 .wave-row {
