@@ -132,6 +132,8 @@ export interface SymmetrySettings {
 export interface PatternSettings {
   width: number;
   height: number;
+  /** Canvas preview zoom multiplier (0.25-4.0), does not affect export size */
+  zoom?: number;
   cellSize: number;
   colors: string[]; // hex colors, up to 20
   direction: GradientDirection;
@@ -196,6 +198,7 @@ export const MAX_BRUSH_SIZE = 32;
 export const DEFAULT_SETTINGS: PatternSettings = {
   width: 512,
   height: 512,
+  zoom: 1,
   cellSize: 16,
   colors: ['#0ff', '#f0f', '#ff0'],
   direction: 'top-bottom',

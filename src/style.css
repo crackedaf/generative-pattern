@@ -245,13 +245,13 @@ input[type="range"]:focus {
   outline: none;
 }
 
-.slider-value
+/*.slider-value
   min-width: 40px;
   text-align: right;
   font-size: 12px;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
-}
+}*/
 
 /* Checkboxes */
 .checkbox-row {
@@ -351,7 +351,8 @@ button.danger:hover:not(:disabled) {
 
 #regenerate,
 #export-png,
-#export-svg {
+#export-svg,
+#apply-replace {
   background: #000000;
   border: 1px solid var(--border);
   color: #ffffff;
@@ -359,7 +360,8 @@ button.danger:hover:not(:disabled) {
 
 #regenerate:hover:not(:disabled),
 #export-png:hover:not(:disabled),
-#export-svg:hover:not(:disabled) {
+#export-svg:hover:not(:disabled),
+#apply-replace:hover:not(:disabled) {
   background: #60ff60;
   border-color: #90ee90;
   color: #000000;

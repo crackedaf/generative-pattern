@@ -27,6 +27,8 @@ const STORAGE_SETTINGS = 'generative-pattern-settings';
 let debounceTimer: number | null = null;
 const DEFAULT_TEXTURE_PRESET_NAME = PRESETS.find(p => p.generator !== 'brick')?.name ?? PRESETS[0]?.name ?? '';
 const MAX_WAVE_LAYERS = 10;
+const MIN_CANVAS_ZOOM = 0.25;
+const MAX_CANVAS_ZOOM = 4;
 let debouncedSettingsEmitter: ((settings: PatternSettings) => void) | null = null;
 const DEFAULT_WAVE_LAYER: WaveLayer = {
     amplitude: 20,
@@ -34,6 +36,17 @@ const DEFAULT_WAVE_LAYER: WaveLayer = {
     phase: 0,
     influence: 1,
 };
+
+function clampCanvasZoom(value: number): number {
+    if (!Number.isFinite(value)) {
+        return DEFAULT_SETTINGS.zoom ?? 1;
+    }
+    return Math.max(MIN_CANVAS_ZOOM, Math.min(MAX_CANVAS_ZOOM, value));
+}
+
+function formatCanvasZoom(value: number): string {
+    return `${Math.round(value * 100)}%`;
+}
 
 function clampGradientBlendFactor(value: number): number {
     return Math.max(0, Math.min(1, value));
@@ -611,6 +624,9 @@ function syncUIToSettings(): void {
     getElement<HTMLInputElement>('height').value = String(settings.height);
     getElement<HTMLInputElement>('cell-size').value = String(settings.cellSize);
     getElement<HTMLSpanElement>('cell-size-value').textContent = String(settings.cellSize);
+    const zoom = clampCanvasZoom(settings.zoom ?? DEFAULT_SETTINGS.zoom ?? 1);
+    getElement<HTMLInputElement>('zoom').value = zoom.toFixed(2);
+    getElement<HTMLSpanElement>('zoom-value').textContent = formatCanvasZoom(zoom);
 
     // Gradient
     const directionSelect = getElement<HTMLSelectElement>('direction');
@@ -790,6 +806,7 @@ export function initUI(callbacks: {
 
     initialSettings = {
         ...initialSettings,
+        zoom: clampCanvasZoom(Number(initialSettings.zoom ?? DEFAULT_SETTINGS.zoom ?? 1)),
         gradientBlendFactor: clampGradientBlendFactor(
             Number(initialSettings.gradientBlendFactor ?? DEFAULT_SETTINGS.gradientBlendFactor)
         ),
@@ -841,6 +858,15 @@ export function initUI(callbacks: {
         getElement<HTMLSpanElement>('cell-size-value').textContent = String(cellSize);
         uiState!.settings = { ...uiState!.settings, cellSize };
         debouncedSettingsChange(uiState!.settings);
+    });
+
+    // Canvas zoom slider
+    const zoomInput = getElement<HTMLInputElement>('zoom');
+    zoomInput.addEventListener('input', () => {
+        const zoom = clampCanvasZoom(parseFloat(zoomInput.value));
+        getElement<HTMLSpanElement>('zoom-value').textContent = formatCanvasZoom(zoom);
+        uiState!.settings = { ...uiState!.settings, zoom };
+        callbacks.onSettingsChange(uiState!.settings);
     });
 
     // Direction select

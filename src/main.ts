@@ -23,6 +23,13 @@ let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 let settings: PatternSettings;
 let overrides: Map<string, string> = new Map();
+const MIN_CANVAS_ZOOM = 0.25;
+const MAX_CANVAS_ZOOM = 4;
+
+function getCanvasZoom(zoom: number | undefined): number {
+  const normalizedZoom = Number.isFinite(zoom) ? Number(zoom) : 1;
+  return Math.max(MIN_CANVAS_ZOOM, Math.min(MAX_CANVAS_ZOOM, normalizedZoom));
+}
 
 /**
  * Initializes the canvas element
@@ -56,9 +63,11 @@ function resizeCanvas(): void {
       maxHeight / settings.height,
       1 // Don't scale up
     );
+    const zoom = getCanvasZoom(settings.zoom);
+    const displayScale = scale * zoom;
 
-    canvas.style.width = `${settings.width * scale}px`;
-    canvas.style.height = `${settings.height * scale}px`;
+    canvas.style.width = `${settings.width * displayScale}px`;
+    canvas.style.height = `${settings.height * displayScale}px`;
   }
 }
 
