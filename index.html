@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Generate abstract geometric patterns with customizable gradients, colors, and pixel editing">
+  <title>Generative Pattern</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%236366f1' width='100' height='100' rx='20'/><rect fill='%23a855f7' x='20' y='20' width='25' height='25'/><rect fill='%2322d3ee' x='55' y='20' width='25' height='25'/><rect fill='%23fbbf24' x='20' y='55' width='25' height='25'/><rect fill='%23f472b6' x='55' y='55' width='25' height='25'/></svg>">
+  <script type="module" crossorigin src="/assets/index-CIRQH4yg.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-tv9Zbzcm.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Presets Panel -->
+    <aside class="preset-panel" role="complementary" aria-label="Preset controls">
+      <header class="panel-header">
+        <h1>Generative Pattern</h1>
+        <p class="panel-sub">Pattern studio</p>
+      </header>
+
+      <details class="section" open>
+        <summary class="section-title">Presets</summary>
+        <div class="section-body">
+          <div class="control-row">
+            <label for="preset-mode-toggle">Mode</label>
+            <button
+              type="button"
+              id="preset-mode-toggle"
+              class="secondary mode-toggle-button"
+              aria-label="Toggle preset mode"
+              aria-pressed="false"
+              data-mode="grid">Grid Presets</button>
+          </div>
+          <div class="control-row">
+            <label for="presets">Preset</label>
+            <select id="presets" aria-label="Load preset palette">
+              <option value="">Select preset…</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <details class="section">
+        <summary class="section-title">Saved Palettes</summary>
+        <div class="section-body">
+          <div class="control-row">
+            <label for="saved-palettes">Load</label>
+            <select id="saved-palettes" aria-label="Load saved palette">
+              <option value="">My palettes…</option>
+            </select>
+          </div>
+          <button type="button" id="save-palette" class="secondary full-width">
+            Save Current Palette
+          </button>
+        </div>
+      </details>
+
+      <p class="hint">
+        <kbd>R</kbd> regenerate · <kbd>E</kbd> edit · <kbd>Ctrl+S</kbd> export
+      </p>
+    </aside>
+
+    <!-- Canvas Area -->
+    <main id="canvas-container" role="main" aria-label="Pattern preview">
+      <canvas id="canvas" width="512" height="512"></canvas>
+    </main>
+
+    <!-- Settings Panel -->
+    <aside class="control-panel settings-panel" role="complementary" aria-label="Pattern controls">
+
+      <!-- Sticky action bar -->
+      <div class="action-bar">
+        <button type="button" id="regenerate" class="primary action-main">
+          <span>Regenerate</span>
+          <span class="shortcut">R</span>
+        </button>
+        <div class="action-row">
+          <button type="button" id="export-png" class="secondary">
+            PNG
+            <span class="shortcut">⌘S</span>
+          </button>
+          <button type="button" id="export-svg" class="secondary">
+            SVG
+            <span class="shortcut">⌘X</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Canvas Size -->
+      <details class="section" open>
+        <summary class="section-title">Canvas</summary>
+        <div class="section-body">
+          <div class="control-row">
+            <label for="width">Width</label>
+            <input type="number" id="width" value="512" min="1" max="4096" aria-label="Canvas width in pixels">
+            <span class="unit">px</span>
+          </div>
+          <div class="control-row">
+            <label for="height">Height</label>
+            <input type="number" id="height" value="512" min="1" max="4096" aria-label="Canvas height in pixels">
+            <span class="unit">px</span>
+          </div>
+          <div class="control-row">
+            <label for="cell-size">Cell Size</label>
+            <input type="range" id="cell-size" min="1" max="64" value="16" aria-label="Grid cell size">
+            <span id="cell-size-value" class="slider-value">16</span>
+          </div>
+          <div class="control-row">
+            <label for="zoom">Zoom</label>
+            <input type="range" id="zoom" min="0.25" max="4" step="0.05" value="1" aria-label="Canvas zoom level">
+            <span id="zoom-value" class="slider-value">100%</span>
+          </div>
+          <span id="size-warning" class="warning"></span>
+        </div>
+      </details>
+
+      <!-- Gradient -->
+      <details class="section" open>
+        <summary class="section-title">Gradient</summary>
+        <div class="section-body">
+          <div class="control-row">
+            <label for="direction">Direction</label>
+            <select id="direction" aria-label="Gradient direction">
+              <option value="top-bottom">Top → Bottom</option>
+              <option value="bottom-top">Bottom → Top</option>
+              <option value="left-right">Left → Right</option>
+              <option value="right-left">Right → Left</option>
+            </select>
+          </div>
+          <div class="radio-group">
+            <label>
+              <input type="radio" name="color-mode" id="mode-solid" checked>
+              Solid
+            </label>
+            <label>
+              <input type="radio" name="color-mode" id="mode-gradient">
+              Gradient
+            </label>
+          </div>
+          <div class="control-row">
+            <label for="gradient-factor">Blend</label>
+            <input type="range" id="gradient-factor" min="0" max="1" step="0.01" value="1"
+              aria-label="Gradient blend strength factor">
+            <span id="gradient-factor-value" class="slider-value">1.00</span>
+          </div>
+          <div class="control-row">
+            <label for="randomness">Randomness</label>
+            <input type="range" id="randomness" min="0" max="1" step="0.01" value="0"
+              aria-label="Color randomness amount">
+            <span id="randomness-value" class="slider-value">0.00</span>
+          </div>
+          <div class="control-row">
+            <label for="seed">Seed</label>
+            <input type="text" id="seed" value="42" aria-label="Random seed for reproducibility">
+          </div>
+        </div>
+      </details>
+
+      <!-- Colors -->
+      <details class="section" open>
+        <summary class="section-title">
+          Colors
+          <span class="tag">max 20</span>
+        </summary>
+        <div class="section-body">
+          <div id="color-list" class="color-list" role="list" aria-label="Color palette"></div>
+          <button type="button" id="add-color" class="secondary full-width">+ Add Color</button>
+        </div>
+      </details>
+
+      <!-- Symmetry -->
+      <details class="section">
+        <summary class="section-title">Symmetry</summary>
+        <div class="section-body">
+          <div class="checkbox-row">
+            <input type="checkbox" id="symmetry-h">
+            <label for="symmetry-h">Mirror horizontal</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="symmetry-v">
+            <label for="symmetry-v">Mirror vertical</label>
+          </div>
+        </div>
+      </details>
+
+      <!-- Wave Distortion -->
+      <details class="section" id="wave-distortion-controls">
+        <summary class="section-title">Wave Distortion</summary>
+        <div class="section-body">
+          <div class="checkbox-row">
+            <input type="checkbox" id="wave-distortion-enabled">
+            <label for="wave-distortion-enabled">Enable wave distortion</label>
+          </div>
+          <div id="wave-layers" class="wave-layers" aria-label="Wave layers"></div>
+          <button type="button" id="add-wave" class="secondary full-width">+ Add Wave</button>
+          <p class="hint">Layer up to 10 waves to vertically warp the grid.</p>
+        </div>
+      </details>
+
+      <!-- Brick Controls (shown only in Brick mode) -->
+      <details class="section" id="brick-controls" style="display:none" open aria-label="Brick pattern controls">
+        <summary class="section-title">
+          Brick Controls
+          <span class="mode-badge" id="brick-mode-badge">Active</span>
+        </summary>
+        <div class="section-body">
+
+          <div class="control-row">
+            <label for="brick-style">Style</label>
+            <select id="brick-style" aria-label="Brick texture style" disabled>
+              <option value="RedBrick">Red Brick</option>
+              <option value="MossyBrick">Mossy Brick</option>
+            </select>
+          </div>
+
+          <div class="control-row">
+            <label for="brick-texture-mode">Texture Mode</label>
+            <select id="brick-texture-mode" aria-label="Brick texture mode" disabled>
+              <option value="solid">Solid</option>
+              <option value="singlePreset">Single Preset</option>
+              <option value="randomPreset">Random Preset</option>
+            </select>
+          </div>
+
+          <div class="control-row" id="brick-texture-preset-row" style="display:none">
+            <label for="brick-texture-preset">Texture Preset</label>
+            <select id="brick-texture-preset" aria-label="Texture preset for bricks" disabled></select>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="brick-randomize-per-brick" disabled>
+            <label for="brick-randomize-per-brick">Randomize per brick</label>
+          </div>
+
+          <div class="control-row">
+            <label for="brick-texture-scale">Texture Scale</label>
+            <input type="range" id="brick-texture-scale" min="0.1" max="2" step="0.1" value="1" aria-label="Brick texture scale"
+              disabled>
+            <span id="brick-texture-scale-value" class="slider-value">1.00</span>
+          </div>
+
+          <div class="control-row">
+            <label for="brick-texture-rotation">Rotation</label>
+            <input type="range" id="brick-texture-rotation" min="0" max="360" step="1" value="0"
+              aria-label="Brick texture rotation in degrees" disabled>
+            <span id="brick-texture-rotation-value" class="slider-value">0°</span>
+          </div>
+
+          <div class="control-row">
+            <label for="brick-width">Brick Width</label>
+            <input type="range" id="brick-width" min="5" max="200" value="80" aria-label="Brick width in pixels" disabled>
+            <span id="brick-width-value" class="slider-value">80px</span>
+          </div>
+
+          <div class="control-row">
+            <label for="brick-height">Brick Height</label>
+            <input type="range" id="brick-height" min="5" max="100" value="40" aria-label="Brick height in pixels"
+              disabled>
+            <span id="brick-height-value" class="slider-value">40px</span>
+          </div>
+
+          <div class="control-row">
+            <label for="mortar-thickness">Mortar</label>
+            <input type="range" id="mortar-thickness" min="0" max="20" value="4" aria-label="Mortar thickness in pixels"
+              disabled>
+            <span id="mortar-thickness-value" class="slider-value">4</span>
+          </div>
+
+          <div class="control-row">
+            <label for="brick-variation">Variation</label>
+            <input type="range" id="brick-variation" min="0" max="1" step="0.01" value="0.3"
+              aria-label="Brick colour variation" disabled>
+            <span id="brick-variation-value" class="slider-value">0.30</span>
+          </div>
+
+          <div class="control-row" id="moss-density-row" style="display:none">
+            <label for="moss-density">Moss Density</label>
+            <input type="range" id="moss-density" min="0" max="1" step="0.01" value="0" aria-label="Moss density 0 to 1"
+              disabled>
+            <span id="moss-density-value" class="slider-value">0.00</span>
+          </div>
+
+          <div class="control-row">
+            <label for="brick-base-color">Brick Color</label>
+            <input type="color" id="brick-base-color" value="#8b2500" aria-label="Base brick colour" disabled>
+          </div>
+
+          <div class="control-row">
+            <label for="mortar-color">Mortar Color</label>
+            <input type="color" id="mortar-color" value="#c8b89a" aria-label="Mortar colour" disabled>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="show-cracks" disabled>
+            <label for="show-cracks">Show cracks</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="optimize-svg" disabled>
+            <label for="optimize-svg">Optimize SVG</label>
+          </div>
+        </div>
+      </details>
+
+      <!-- Pixel Editor -->
+      <details class="section">
+        <summary class="section-title">
+          Pixel Editor
+          <span class="shortcut">E</span>
+        </summary>
+        <div class="section-body">
+          <div class="checkbox-row">
+            <input type="checkbox" id="edit-mode">
+            <label for="edit-mode">Edit mode</label>
+          </div>
+          <div class="control-row">
+            <label for="brush-size">Brush</label>
+            <input type="range" id="brush-size" min="1" max="32" value="1" aria-label="Brush size in cells">
+            <span id="brush-size-value" class="slider-value">1</span>
+          </div>
+          <div class="control-row">
+            <label for="brush-color">Color</label>
+            <input type="color" id="brush-color" value="#ffffff" aria-label="Brush color">
+          </div>
+          <p class="hint">Click to paint · Shift+Click to eyedrop</p>
+          <button type="button" id="clear-overrides" class="secondary danger full-width">
+            Clear All Edits
+          </button>
+        </div>
+      </details>
+
+      <!-- Color Replace -->
+      <details class="section">
+        <summary class="section-title">Find &amp; Replace</summary>
+        <div class="section-body">
+          <div class="replace-row">
+            <input type="color" id="replace-from" value="#ffffff" aria-label="Source color">
+            <span class="arrow">→</span>
+            <input type="color" id="replace-to" value="#000000" aria-label="Target color">
+            <button type="button" id="apply-replace" class="secondary">Apply</button>
+          </div>
+        </div>
+      </details>
+    </aside>
+
+  </div>
+
+</body>
+
+</html>
