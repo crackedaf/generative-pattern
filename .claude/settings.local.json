@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(taskkill //F //FI \"WINDOWTITLE eq vite*\")"
+    ]
+  }
+}

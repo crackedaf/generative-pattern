@@ -1,29 +1,20 @@
 # Generative Pattern
 
-Generative Pattern is a local-first TypeScript + Vite app for creating deterministic abstract art in the browser. It supports both classic grid generation and a brick-pattern renderer with texture layering, then exports to PNG or SVG.
-
-## Latest Changes Included
-
-- Added a full **brick generator mode** with dedicated controls (brick size, mortar, variation, cracks, moss, and SVG optimization).
-- Added **brick texture modes**: `solid`, `singlePreset`, and `randomPreset`, including per-brick randomization, texture scale, and texture rotation.
-- Added **wave distortion** with up to 10 layers, each with amplitude, frequency, phase, and influence.
-- Added **gradient blend factor** control for smoother interpolation in gradient cell mode.
-- Added **preset mode toggle** (grid presets vs brick presets) and expanded built-in preset collection.
-- Fixed **cell-size snapping / centered grid rendering** for cleaner alignment.
-- Updated shortcuts: SVG export is now `Ctrl/Cmd + X`.
-- Made rendering/export behavior align with the current transparent-background workflow.
+Generative Pattern is a local-first TypeScript + Vite app for making deterministic abstract art in the browser. It supports both a classic grid renderer and a brick-style generator, with export to PNG and SVG.
 
 ## Features
 
-- Two generators: **Grid** and **Brick**.
-- Palette workflow: up to **20 colors**, drag-and-drop reorder, save/load palettes from `localStorage`.
-- Gradient controls: direction, seeded randomness, solid vs gradient color mode, and blend factor.
-- Wave distortion system: layer multiple waves without breaking deterministic output.
-- Symmetry controls: horizontal and vertical mirroring.
-- Pixel editor: paint overrides, brush size `1-32`, eyedropper with `Shift + Click`, clear all edits.
-- Color replace utility: find/replace across generated cells.
-- Deterministic generation: same settings + seed always reproduce the same result.
-- Export: PNG and SVG with stable, parseable filenames and SVG metadata.
+- Dual generators: `grid` and `brick`.
+- Deterministic output: the same seed + settings always recreate the same image.
+- Palette tools: up to 20 colors, drag reorder, save/load palettes in `localStorage`.
+- Color behavior controls: direction, randomness, solid vs gradient cell mode, gradient blend factor.
+- Wave distortion: stack multiple wave layers (amplitude, frequency, phase, influence).
+- Symmetry options: horizontal and vertical mirroring.
+- Pixel editor: brush painting, brush size `1-32`, eyedropper (`Shift + Click`), clear overrides.
+- Color replacement utility for bulk cell recoloring.
+- Brick controls: style, dimensions, mortar, variation, cracks, moss, and SVG optimization.
+- Brick texture modes: `solid`, `singlePreset`, and `randomPreset`, with scale/rotation controls.
+- Export helpers: PNG and SVG with deterministic naming and metadata.
 
 ## Quick Start
 
@@ -32,11 +23,25 @@ npm install
 npm run dev
 ```
 
-Build and test:
+Open the local Vite URL shown in the terminal.
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Type-check (`tsc`) and build production assets |
+| `npm run preview` | Preview the built app locally |
+| `npm run test` | Run all Vitest tests once |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run tests with coverage output |
+
+Useful targeted test commands:
 
 ```bash
-npm run build
-npm run test
+npm run test -- src/tests/rng.test.ts
+npm run test -- -t "parseSeed"
+npm run test -- src/tests/rng.test.ts -t "parseSeed"
 ```
 
 ## Keyboard Shortcuts
@@ -49,51 +54,32 @@ npm run test
 | `E` | Toggle edit mode |
 | `Shift + Click` | Eyedropper color pick |
 
-## Presets
-
-- Built-in presets include both **grid** and **brick** categories.
-- Notable entries: `Terrain Waves`, `Classic Brick`, `Mossy Ruins`, and `Preset Texture Brick Demo`.
-- Presets carry full config (palette, seed, randomness, direction, and optional wave/brick settings).
-
-## Export Notes
-
-- PNG export uses `devicePixelRatio` for high-DPI output in grid mode.
-- SVG export is pure vector and includes metadata attributes (seed, generator, cell size, direction, randomness, blend factor, wave info, colors).
-- Brick SVG export supports mortar/background, grouped solid fills, textured clipping paths, moss patches, and cracks.
-
-## Project Structure
+## Project Layout
 
 ```text
-generative-pattern/
-|- index.html
-|- src/
-|  |- main.ts
-|  |- ui.ts
-|  |- renderer.ts
-|  |- brickGenerator.ts
-|  |- waveDistortion.ts
-|  |- gridUtils.ts
-|  |- gradient.ts
-|  |- pixelEditor.ts
-|  |- colorReplacer.ts
-|  |- exporter.ts
-|  |- rng.ts
-|  |- presets.ts
-|  |- types.ts
-|  |- style.css
-|  `- tests/
-|- package.json
-|- tsconfig.json
-|- vite.config.ts
-`- README.md
+src/
+|- main.ts            # app bootstrap and wiring
+|- ui.ts              # controls, bindings, localStorage
+|- renderer.ts        # frame queue + drawing orchestration
+|- brickGenerator.ts  # brick generation + brick render helpers
+|- waveDistortion.ts  # wave layer transformation logic
+|- exporter.ts        # PNG/SVG/JSON export helpers
+|- pixelEditor.ts     # manual cell editing interactions
+|- colorReplacer.ts   # global color replacement utility
+|- gradient.ts        # color parsing + interpolation
+|- rng.ts             # seeded random utilities
+|- presets.ts         # built-in preset definitions
+|- types.ts           # shared contracts/constants
+`- tests/             # Vitest unit tests
 ```
 
 ## Technical Notes
 
+- Browser app runtime, no backend service.
+- Strict TypeScript project (`noUnusedLocals`, `noUnusedParameters`).
+- Test environment is Node via Vitest (configured in `vite.config.ts`).
 - Max canvas safety cap: `1,048,576` total pixels.
-- Runtime is browser-only, but tests run in Node via Vitest.
-- Strict TypeScript is enabled (`noUnusedLocals`, `noUnusedParameters`).
-- Core randomness uses `mulberry32` for reproducibility.
+- Core seeded randomness uses `mulberry32`.
 
 ## License
 
